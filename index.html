@@ -1,0 +1,3331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ReMarket Philippines - Buy & Sell Everything</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <!-- Add Google Identity Services library -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <!-- Add Facebook SDK -->
+    <script async defer crossorigin="anonymous" src="https://connect.facebook.net/en_US/sdk.js"></script>
+    <style>
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        .chat-bubble {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .hidden {
+            display: none;
+        }
+        #imagePreviewContainer {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .preview-image {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 5px;
+            position: relative;
+        }
+        .remove-image {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: red;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        #sellItemModal, #productDetailModal, #mortgageCalculatorModal, #savedSearchesModal, #adminDashboardModal, #userProfileModal {
+            transition: all 0.3s ease;
+        }
+        .modal-container {
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .category-icon {
+            font-size: 1.2rem;
+            margin-right: 8px;
+        }
+        .emoji-selector {
+            font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
+        }
+        #propertyMap, #detailPropertyMap {
+            height: 300px;
+            width: 100%;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+        .tab-button {
+            transition: all 0.3s ease;
+        }
+        .tab-button.active {
+            border-bottom: 2px solid #4f46e5;
+            color: #4f46e5;
+            font-weight: 600;
+        }
+        .social-login-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        .google-btn {
+            background-color: #fff;
+            color: #757575;
+            border: 1px solid #ddd;
+        }
+        .google-btn:hover {
+            background-color: #f7f7f7;
+        }
+        .facebook-btn {
+            background-color: #1877F2;
+            color: white;
+            border: 1px solid #1877F2;
+        }
+        .facebook-btn:hover {
+            background-color: #166FE5;
+        }
+        .apple-btn {
+            background-color: #000;
+            color: white;
+            border: 1px solid #000;
+        }
+        .apple-btn:hover {
+            background-color: #333;
+        }
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 20px 0;
+        }
+        .divider::before, .divider::after {
+            content: "";
+            flex: 1;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .divider-text {
+            padding: 0 10px;
+            color: #757575;
+        }
+        .admin-badge {
+            background-color: #ef4444;
+            color: white;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            margin-left: 0.5rem;
+        }
+        .dashboard-card {
+            transition: all 0.3s ease;
+        }
+        .dashboard-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .status-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+        }
+        .status-active {
+            background-color: #10b981;
+            color: white;
+        }
+        .status-inactive {
+            background-color: #6b7280;
+            color: white;
+        }
+        .status-sold {
+            background-color: #3b82f6;
+            color: white;
+        }
+        .status-pending {
+            background-color: #f59e0b;
+            color: white;
+        }
+        @media (max-width: 640px) {
+            .mobile-flex-col {
+                flex-direction: column;
+            }
+            .mobile-w-full {
+                width: 100%;
+            }
+            .mobile-mt-2 {
+                margin-top: 0.5rem;
+            }
+            #productDetailModal .modal-container {
+                flex-direction: column;
+            }
+            #productDetailModal .modal-container > div {
+                width: 100% !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Login Modal -->
+    <div id="loginModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-8 max-w-md w-full">
+            <h2 class="text-2xl font-bold text-center mb-6">Welcome to ReMarket Philippines</h2>
+            <div id="loginError" class="text-red-500 mb-4 text-center hidden">Invalid credentials</div>
+            
+            <!-- Social Login Buttons -->
+            <div class="space-y-3 mb-4">
+                <button id="googleSignInBtn" class="social-login-btn google-btn">
+                    <i class="fab fa-google mr-2"></i> Continue with Google
+                </button>
+                <button id="facebookSignInBtn" class="social-login-btn facebook-btn">
+                    <i class="fab fa-facebook-f mr-2"></i> Continue with Facebook
+                </button>
+                <button id="appleSignInBtn" class="social-login-btn apple-btn">
+                    <i class="fab fa-apple mr-2"></i> Continue with Apple
+                </button>
+            </div>
+            
+            <div class="divider">
+                <span class="divider-text">or</span>
+            </div>
+            
+            <!-- Email/Password Login Form -->
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-gray-700 mb-2">Email</label>
+                    <input type="email" id="email" class="w-full px-4 py-2 border rounded-md" placeholder="Enter your email">
+                </div>
+                <div>
+                    <label class="block text-gray-700 mb-2">Password</label>
+                    <input type="password" id="password" class="w-full px-4 py-2 border rounded-md" placeholder="Enter password">
+                </div>
+                <button id="loginBtn" class="w-full bg-indigo-600 text-white py-2 rounded-md hover:bg-indigo-700 transition duration-300">
+                    Login
+                </button>
+                <p class="text-center text-gray-500 text-sm">
+                    Don't have an account? <button id="showRegisterBtn" class="text-indigo-600 hover:underline">Register</button>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Registration Modal -->
+    <div id="registerModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg p-8 max-w-md w-full">
+            <h2 class="text-2xl font-bold text-center mb-6">Create Account</h2>
+            <div id="registerError" class="text-red-500 mb-4 text-center hidden"></div>
+            
+            <!-- Social Registration Buttons -->
+            <div class="space-y-3 mb-4">
+                <button id="googleRegisterBtn" class="social-login-btn google-btn">
+                    <i class="fab fa-google mr-2"></i> Continue with Google
+                </button>
+                <button id="facebookRegisterBtn" class="social-login-btn facebook-btn">
+                    <i class="fab fa-facebook-f mr-2"></i> Continue with Facebook
+                </button>
+                <button id="appleRegisterBtn" class="social-login-btn apple-btn">
+                    <i class="fab fa-apple mr-2"></i> Continue with Apple
+                </button>
+            </div>
+            
+            <div class="divider">
+                <span class="divider-text">or</span>
+            </div>
+            
+            <!-- Email/Password Registration Form -->
+            <form id="registerForm" class="space-y-4">
+                <div>
+                    <label class="block text-gray-700 mb-2">Full Name</label>
+                    <input type="text" id="registerName" class="w-full px-4 py-2 border rounded-md" placeholder="Enter your full name" required>
+                </div>
+                <div>
+                    <label class="block text-gray-700 mb-2">Email</label>
+                    <input type="email" id="registerEmail" class="w-full px-4 py-2 border rounded-md" placeholder="Enter your email" required>
+                </div>
+                <div>
+                    <label class="block text-gray-700 mb-2">Password</label>
+                    <input type="password" id="registerPassword" class="w-full px-4 py-2 border rounded-md" placeholder="Create password" required minlength="6">
+                </div>
+                <div>
+                    <label class="block text-gray-700 mb-2">Confirm Password</label>
+                    <input type="password" id="registerConfirmPassword" class="w-full px-4 py-2 border rounded-md" placeholder="Confirm password" required>
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" id="agreeTerms" class="mr-2" required>
+                    <label for="agreeTerms" class="text-sm text-gray-600">I agree to the <a href="#" class="text-indigo-600 hover:underline">Terms of Service</a> and <a href="#" class="text-indigo-600 hover:underline">Privacy Policy</a></label>
+                </div>
+                <button type="submit" class="w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700 transition duration-300">
+                    Create Account
+                </button>
+                <p class="text-center text-gray-500 text-sm">
+                    Already have an account? <button type="button" id="showLoginBtn" class="text-indigo-600 hover:underline">Login</button>
+                </p>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Navigation -->
+    <nav class="bg-white shadow-sm hidden" id="mainNav">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <span class="text-xl font-bold text-indigo-600">ReMarket Philippines</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button id="savedSearchesBtn" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center">
+                        <i class="fas fa-save mr-2"></i> <span class="hidden sm:inline">Saved Searches</span>
+                    </button>
+                    <button id="sellItemBtn" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 flex items-center">
+                        <i class="fas fa-plus mr-2"></i> <span class="hidden sm:inline">Sell My Item</span>
+                    </button>
+                    <div class="relative">
+                        <button id="userMenuBtn" class="flex items-center space-x-2">
+                            <img class="h-8 w-8 rounded-full" src="https://randomuser.me/api/portraits/men/32.jpg" alt="User">
+                            <span class="hidden sm:inline">My Account</span>
+                            <span id="adminBadge" class="admin-badge hidden">ADMIN</span>
+                        </button>
+                        <div id="userDropdown" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
+                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" id="profileLink">My Profile</a>
+                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" id="myListingsLink">My Listings</a>
+                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" id="messagesLink">Messages</a>
+                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hidden" id="adminDashboardLink">Admin Dashboard</a>
+                            <button id="logoutBtn" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Logout</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div id="mainContent" class="hidden">
+        <!-- Hero Section -->
+        <div class="relative bg-indigo-700">
+            <div class="absolute inset-0">
+                <img class="w-full h-full object-cover opacity-20" src="https://images.unsplash.com/photo-1551434678-e076c223a692?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=2850&q=80" alt="">
+            </div>
+            <div class="relative max-w-7xl mx-auto py-24 px-4 sm:py-32 sm:px-6 lg:px-8">
+                <h1 class="text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl">
+                    Buy and Sell Directly
+                </h1>
+                <p class="mt-6 text-xl text-indigo-100 max-w-3xl">
+                    Connect with buyers and sellers in your community. No middlemen, just real people.
+                </p>
+                <div class="mt-10">
+                    <div class="relative max-w-md">
+                        <input type="text" id="searchInput" class="block w-full rounded-md border border-transparent py-3 px-5 text-base text-gray-900 placeholder-gray-500 shadow-sm" placeholder="What are you looking for?">
+                        <button id="searchBtn" class="absolute right-2 top-2 bg-indigo-600 text-white py-1 px-4 rounded-md hover:bg-indigo-700">
+                            Search
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+            <div class="border-b border-gray-200">
+                <nav class="-mb-px flex space-x-8 overflow-x-auto">
+                    <button id="allTab" class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm active">
+                        All Items
+                    </button>
+                    <button id="realEstateTab" class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                        Real Estate
+                    </button>
+                    <button id="vehiclesTab" class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                        Vehicles
+                    </button>
+                    <button id="electronicsTab" class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                        Electronics
+                    </button>
+                    <button id="fashionTab" class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                        Fashion
+                    </button>
+                </nav>
+            </div>
+        </div>
+
+        <!-- Product Listing -->
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+                <h2 class="text-2xl font-bold text-gray-900">Latest Items</h2>
+                <div class="flex flex-col sm:flex-row gap-2 mobile-w-full">
+                    <select id="categoryFilter" class="border rounded-md px-3 py-1 mobile-w-full">
+                        <option value="">All Categories</option>
+                        <option value="🏠 Real Estate">🏠 Real Estate</option>
+                        <option value="🚗 Vehicles">🚗 Vehicles</option>
+                        <option value="📱 Electronics">📱 Electronics</option>
+                        <option value="👕 Clothing">👕 Clothing</option>
+                        <option value="🛋️ Home">🛋️ Home</option>
+                        <option value="💍 Jewelry">💍 Jewelry</option>
+                        <option value="💄 Beauty">💄 Beauty</option>
+                        <option value="🎁 Other">🎁 Other</option>
+                    </select>
+                    <select id="sortBy" class="border rounded-md px-3 py-1 mobile-w-full">
+                        <option value="newest">Newest First</option>
+                        <option value="priceLow">Price: Low to High</option>
+                        <option value="priceHigh">Price: High to Low</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" id="marketplaceItems">
+                <!-- Products will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Sell Item Modal -->
+    <div id="sellItemModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl modal-container">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold">Sell My Item</h3>
+                    <button id="closeSellModal" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <form id="productForm" class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-gray-700 mb-2">Product Name*</label>
+                            <input type="text" id="productName" class="w-full px-4 py-2 border rounded-md" required>
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 mb-2">Price (PHP)*</label>
+                            <input type="number" id="productPrice" class="w-full px-4 py-2 border rounded-md" required>
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 mb-2">Main Category*</label>
+                            <select id="mainCategory" class="w-full px-4 py-2 border rounded-md emoji-selector" onchange="updateSubcategories();toggleCategorySpecificFields()" required>
+                                <option value="">Select Category</option>
+                                <option value="🏠 Real Estate">🏠 Real Estate</option>
+                                <option value="🚗 Vehicles">🚗 Vehicles</option>
+                                <option value="📱 Electronics">📱 Electronics</option>
+                                <option value="👕 Clothing">👕 Clothing</option>
+                                <option value="🛋️ Home">🛋️ Home</option>
+                                <option value="💍 Jewelry">💍 Jewelry</option>
+                                <option value="💄 Beauty">💄 Beauty</option>
+                                <option value="🎁 Other">🎁 Other</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 mb-2">Sub-category</label>
+                            <select id="subCategory" class="w-full px-4 py-2 border rounded-md emoji-selector">
+                                <option value="">Select Sub-category</option>
+                                <!-- Subcategories will be populated by JavaScript -->
+                            </select>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-gray-700 mb-2">Description*</label>
+                            <textarea id="productDescription" class="w-full px-4 py-2 border rounded-md h-32" required></textarea>
+                        </div>
+                        
+                        <!-- Real Estate Specific Fields -->
+                        <div id="realEstateFields" class="md:col-span-2 hidden space-y-4">
+                            <h4 class="font-semibold border-b pb-2">Property Details</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-gray-700 mb-2">Floor Area (sqm)</label>
+                                    <input type="number" id="floorArea" class="w-full px-4 py-2 border rounded-md">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 mb-2">Lot Area (sqm)</label>
+                                    <input type="number" id="lotArea" class="w-full px-4 py-2 border rounded-md">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 mb-2">Bedrooms</label>
+                                    <input type="number" id="bedrooms" class="w-full px-4 py-2 border rounded-md">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 mb-2">Bathrooms</label>
+                                    <input type="number" id="bathrooms" class="w-full px-4 py-2 border rounded-md">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 mb-2">Year Built</label>
+                                    <input type="number" id="yearBuilt" class="w-full px-4 py-2 border rounded-md">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 mb-2">Parking Spaces</label>
+                                    <input type="number" id="parkingSpaces" class="w-full px-4 py-2 border rounded-md">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 mb-2">Property Location (for map)</label>
+                                <input type="text" id="propertyAddress" class="w-full px-4 py-2 border rounded-md" placeholder="Enter property address">
+                                <div id="propertyMap" class="hidden"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Vehicle Specific Fields -->
+                        <div id="vehicleFields" class="md:col-span-2 hidden space-y-4">
+                            <h4 class="font-semibold border-b pb-2">Vehicle Details</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-gray-700 mb-2">Brand</label>
+                                    <input type="text" id="vehicleBrand" class="w-full px-4 py-2 border rounded-md">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 mb-2">Model</label>
+                                    <input type="text" id="vehicleModel" class="w-full px-4 py-2 border rounded-md">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 mb-2">Year</label>
+                                    <input type="number" id="vehicleYear" class="w-full px-4 py-2 border rounded-md">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 mb-2">Mileage (km)</label>
+                                    <input type="number" id="vehicleMileage" class="w-full px-4 py-2 border rounded-md">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 mb-2">Fuel Type</label>
+                                    <select id="vehicleFuelType" class="w-full px-4 py-2 border rounded-md">
+                                        <option value="">Select</option>
+                                        <option value="Gasoline">Gasoline</option>
+                                        <option value="Diesel">Diesel</option>
+                                        <option value="Hybrid">Hybrid</option>
+                                        <option value="Electric">Electric</option>
+                                        <option value="LPG / CNG">LPG / CNG</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 mb-2">Transmission</label>
+                                    <select id="vehicleTransmission" class="w-full px-4 py-2 border rounded-md">
+                                        <option value="">Select</option>
+                                        <option value="Manual">Manual</option>
+                                        <option value="Automatic">Automatic</option>
+                                        <option value="CVT">CVT</option>
+                                        <option value="Semi-Automatic">Semi-Automatic</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 mb-2">Color</label>
+                                    <input type="text" id="vehicleColor" class="w-full px-4 py-2 border rounded-md">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 mb-2">Seating Capacity</label>
+                                    <input type="number" id="vehicleSeats" class="w-full px-4 py-2 border rounded-md">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="md:col-span-2">
+                            <label class="block text-gray-700 mb-2">Upload Images (Max 10)*</label>
+                            <div class="border-2 border-dashed border-gray-300 rounded-md p-4 text-center">
+                                <input type="file" id="productImages" class="hidden" multiple accept="image/*">
+                                <label for="productImages" class="cursor-pointer">
+                                    <i class="fas fa-cloud-upload-alt text-3xl text-indigo-500 mb-2"></i>
+                                    <p class="text-sm text-gray-600">Click to upload or drag and drop</p>
+                                    <p class="text-xs text-gray-500 mt-1">PNG, JPG up to 10MB</p>
+                                </label>
+                            </div>
+                            <div id="imagePreviewContainer"></div>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-gray-700 mb-2">Contact Information*</label>
+                            <input type="text" id="contactInfo" class="w-full px-4 py-2 border rounded-md" placeholder="Phone number or email" required>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-gray-700 mb-2">Location</label>
+                            <input type="text" id="location" class="w-full px-4 py-2 border rounded-md" placeholder="City or neighborhood">
+                        </div>
+                    </div>
+                    <div class="flex justify-end space-x-4 pt-4">
+                        <button type="button" id="cancelProduct" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                            Cancel
+                        </button>
+                        <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
+                            Publish Item
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product Detail Modal -->
+    <div id="productDetailModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl modal-container">
+            <div class="p-6 flex flex-col md:flex-row">
+                <div class="flex-1 pr-0 md:pr-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 id="detailProductName" class="text-2xl font-bold">Product Name</h3>
+                        <button id="closeDetailModal" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="flex items-center mb-4">
+                        <img id="detailSellerAvatar" class="h-10 w-10 rounded-full mr-3" src="" alt="Seller">
+                        <div>
+                            <p id="detailSellerName" class="font-medium">Seller Name</p>
+                            <p class="text-sm text-gray-500">Member since <span id="detailMemberSince">2023</span></p>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <span id="detailPrice" class="text-3xl font-bold text-indigo-600">₱0.00</span>
+                        <span id="detailCategory" class="ml-2 text-sm bg-gray-100 px-2 py-1 rounded">Category</span>
+                        <span id="detailStatusBadge" class="ml-2 status-badge status-active">Active</span>
+                    </div>
+                    
+                    <div id="realEstateDetails" class="mb-6 hidden">
+                        <div class="flex justify-between items-center">
+                            <h4 class="font-semibold mb-2">Property Details</h4>
+                            <button id="mortgageCalculatorBtn" class="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700">
+                                <i class="fas fa-calculator mr-1"></i> Mortgage Calculator
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div><span class="font-medium">Floor Area:</span> <span id="detailFloorArea">-</span> sqm</div>
+                            <div><span class="font-medium">Lot Area:</span> <span id="detailLotArea">-</span> sqm</div>
+                            <div><span class="font-medium">Bedrooms:</span> <span id="detailBedrooms">-</span></div>
+                            <div><span class="font-medium">Bathrooms:</span> <span id="detailBathrooms">-</span></div>
+                            <div><span class="font-medium">Year Built:</span> <span id="detailYearBuilt">-</span></div>
+                            <div><span class="font-medium">Parking Spaces:</span> <span id="detailParkingSpaces">-</span></div>
+                        </div>
+                        <div class="mt-4">
+                            <h4 class="font-semibold mb-2">Location</h4>
+                            <div id="detailPropertyMap" class="h-48 rounded-lg overflow-hidden"></div>
+                        </div>
+                    </div>
+                    
+                    <div id="vehicleDetails" class="mb-6 hidden">
+                        <h4 class="font-semibold mb-2">Vehicle Details</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div><span class="font-medium">Brand:</span> <span id="detailVehicleBrand">-</span></div>
+                            <div><span class="font-medium">Model:</span> <span id="detailVehicleModel">-</span></div>
+                            <div><span class="font-medium">Year:</span> <span id="detailVehicleYear">-</span></div>
+                            <div><span class="font-medium">Mileage:</span> <span id="detailVehicleMileage">-</span> km</div>
+                            <div><span class="font-medium">Fuel Type:</span> <span id="detailVehicleFuelType">-</span></div>
+                            <div><span class="font-medium">Transmission:</span> <span id="detailVehicleTransmission">-</span></div>
+                            <div><span class="font-medium">Color:</span> <span id="detailVehicleColor">-</span></div>
+                            <div><span class="font-medium">Seating Capacity:</span> <span id="detailVehicleSeats">-</span></div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <h4 class="font-semibold mb-2">Description</h4>
+                        <p id="detailDescription" class="text-gray-700">Product description goes here.</p>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <h4 class="font-semibold mb-2">Contact Seller</h4>
+                        <p id="detailContact" class="text-gray-700">Contact information</p>
+                        <button id="contactSellerBtn" class="mt-2 bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">
+                            <i class="fas fa-envelope mr-2"></i> Send Message
+                        </button>
+                    </div>
+                    
+                    <div>
+                        <h4 class="font-semibold mb-2">Location</h4>
+                        <p id="detailLocation" class="text-gray-700">City, Country</p>
+                    </div>
+
+                    <!-- Admin controls (hidden by default) -->
+                    <div id="adminControls" class="mt-6 pt-6 border-t hidden">
+                        <h4 class="font-semibold mb-2 text-red-600">Admin Controls</h4>
+                        <div class="flex space-x-2">
+                            <button id="deletePostBtn" class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">
+                                <i class="fas fa-trash mr-2"></i> Delete Post
+                            </button>
+                            <button id="disableUserBtn" class="bg-yellow-600 text-white px-4 py-2 rounded-md hover:bg-yellow-700">
+                                <i class="fas fa-user-slash mr-2"></i> Disable User
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="w-full md:w-1/2 mt-6 md:mt-0">
+                    <div class="sticky top-4">
+                        <div id="productImageGallery" class="mb-4 rounded-lg overflow-hidden">
+                            <!-- Main image will go here -->
+                        </div>
+                        <div id="productThumbnails" class="grid grid-cols-4 gap-2">
+                            <!-- Thumbnails will go here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mortgage Calculator Modal -->
+    <div id="mortgageCalculatorModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold">Mortgage Calculator</h3>
+                <button id="closeMortgageCalculator" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-gray-700 mb-2">Property Price (PHP)</label>
+                    <input type="number" id="mortgagePrice" class="w-full px-4 py-2 border rounded-md" value="0">
+                </div>
+                <div>
+                    <label class="block text-gray-700 mb-2">Down Payment (%)</label>
+                    <input type="number" id="downPaymentPercent" class="w-full px-4 py-2 border rounded-md" value="20" min="0" max="100">
+                </div>
+                <div>
+                    <label class="block text-gray-700 mb-2">Loan Term (years)</label>
+                    <input type="number" id="loanTerm" class="w-full px-4 py-2 border rounded-md" value="20" min="1" max="30">
+                </div>
+                <div>
+                    <label class="block text-gray-700 mb-2">Interest Rate (%)</label>
+                    <input type="number" id="interestRate" class="w-full px-4 py-2 border rounded-md" value="6" step="0.1" min="0" max="20">
+                </div>
+                
+                <div class="pt-4 border-t">
+                    <h4 class="font-semibold mb-2">Calculation Results</h4>
+                    <div class="space-y-2">
+                        <div class="flex justify-between">
+                            <span>Down Payment:</span>
+                            <span id="downPaymentAmount" class="font-medium">₱0.00</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Loan Amount:</span>
+                            <span id="loanAmount" class="font-medium">₱0.00</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Monthly Payment:</span>
+                            <span id="monthlyPayment" class="font-medium text-indigo-600">₱0.00</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Total Interest:</span>
+                            <span id="totalInterest" class="font-medium">₱0.00</span>
+                        </div>
+                        <div class="flex justify-between font-bold border-t pt-2 mt-2">
+                            <span>Total Cost:</span>
+                            <span id="totalCost" class="text-green-600">₱0.00</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <button id="calculateMortgageBtn" class="w-full bg-indigo-600 text-white py-2 rounded-md hover:bg-indigo-700 mt-4">
+                    Calculate
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Saved Searches Modal -->
+    <div id="savedSearchesModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold">Saved Searches</h3>
+                <button id="closeSavedSearches" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-4">
+                <div id="savedSearchesList" class="max-h-96 overflow-y-auto">
+                    <!-- Saved searches will be listed here -->
+                    <p class="text-gray-500 text-center py-4">You don't have any saved searches yet.</p>
+                </div>
+                
+                <div class="border-t pt-4">
+                    <h4 class="font-semibold mb-2">Save Current Search</h4>
+                    <div class="flex space-x-2">
+                        <input type="text" id="searchName" class="flex-1 px-4 py-2 border rounded-md" placeholder="Name this search">
+                        <button id="saveCurrentSearchBtn" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">
+                            Save
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Dashboard Modal -->
+    <div id="adminDashboardModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-6xl modal-container">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-2xl font-bold">Admin Dashboard</h3>
+                    <button id="closeAdminDashboard" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="dashboard-card bg-white p-6 rounded-lg shadow-md border border-gray-200">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-indigo-100 text-indigo-600 mr-4">
+                                <i class="fas fa-users text-xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-gray-500">Total Users</p>
+                                <h4 class="text-2xl font-bold" id="totalUsersCount">0</h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="dashboard-card bg-white p-6 rounded-lg shadow-md border border-gray-200">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-green-100 text-green-600 mr-4">
+                                <i class="fas fa-store text-xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-gray-500">Active Listings</p>
+                                <h4 class="text-2xl font-bold" id="activeListingsCount">0</h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="dashboard-card bg-white p-6 rounded-lg shadow-md border border-gray-200">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
+                                <i class="fas fa-chart-line text-xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-gray-500">Marketplace Activity</p>
+                                <h4 class="text-2xl font-bold" id="marketplaceActivity">0</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+                        <h4 class="font-semibold text-lg mb-4">Recent User Activities</h4>
+                        <div class="overflow-y-auto max-h-96">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Activity</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200" id="userActivitiesTable">
+                                    <!-- User activities will be loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+                        <h4 class="font-semibold text-lg mb-4">User Management</h4>
+                        <div class="mb-4">
+                            <input type="text" id="userSearchInput" class="w-full px-4 py-2 border rounded-md" placeholder="Search users...">
+                        </div>
+                        <div class="overflow-y-auto max-h-96">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200" id="userManagementTable">
+                                    <!-- Users will be loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-6 bg-white p-6 rounded-lg shadow-md border border-gray-200">
+                    <h4 class="font-semibold text-lg mb-4">Recent Listings</h4>
+                    <div class="overflow-y-auto max-h-96">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Seller</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200" id="recentListingsTable">
+                                <!-- Recent listings will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Profile Modal -->
+    <div id="userProfileModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl modal-container">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-2xl font-bold">My Profile</h3>
+                    <button id="closeUserProfile" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <form id="profileForm" class="space-y-6">
+                    <div class="flex flex-col items-center mb-6">
+                        <div class="relative mb-4">
+                            <img id="profileAvatar" class="h-24 w-24 rounded-full object-cover" src="https://randomuser.me/api/portraits/men/32.jpg" alt="Profile">
+                            <button type="button" id="changeAvatarBtn" class="absolute bottom-0 right-0 bg-indigo-600 text-white p-2 rounded-full hover:bg-indigo-700">
+                                <i class="fas fa-camera"></i>
+                            </button>
+                            <input type="file" id="avatarUpload" class="hidden" accept="image/*">
+                        </div>
+                        <h4 id="profileName" class="text-xl font-semibold">John Doe</h4>
+                        <p id="profileEmail" class="text-gray-600">john.doe@example.com</p>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-gray-700 mb-2">Full Name</label>
+                            <input type="text" id="profileFullName" class="w-full px-4 py-2 border rounded-md" required>
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 mb-2">Phone Number</label>
+                            <input type="tel" id="profilePhone" class="w-full px-4 py-2 border rounded-md">
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 mb-2">Facebook Profile URL</label>
+                            <input type="url" id="profileFacebook" class="w-full px-4 py-2 border rounded-md" placeholder="https://facebook.com/yourprofile">
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 mb-2">Location</label>
+                            <input type="text" id="profileLocation" class="w-full px-4 py-2 border rounded-md">
+                        </div>
+                    </div>
+                    
+                    <div class="pt-4 border-t">
+                        <h4 class="font-semibold mb-4">Change Password</h4>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-gray-700 mb-2">Current Password</label>
+                                <input type="password" id="currentPassword" class="w-full px-4 py-2 border rounded-md">
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 mb-2">New Password</label>
+                                <input type="password" id="newPassword" class="w-full px-4 py-2 border rounded-md">
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 mb-2">Confirm New Password</label>
+                                <input type="password" id="confirmNewPassword" class="w-full px-4 py-2 border rounded-md">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end space-x-4 pt-4">
+                        <button type="button" id="cancelProfileChanges" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                            Cancel
+                        </button>
+                        <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
+                            Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- My Listings Modal -->
+    <div id="myListingsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl modal-container">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-2xl font-bold">My Listings</h3>
+                    <button id="closeMyListings" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <div class="mb-4 flex justify-between items-center">
+                    <div class="flex space-x-2">
+                        <button id="allListingsTab" class="px-4 py-2 border rounded-md tab-button active">All</button>
+                        <button id="activeListingsTab" class="px-4 py-2 border rounded-md tab-button">Active</button>
+                        <button id="soldListingsTab" class="px-4 py-2 border rounded-md tab-button">Sold</button>
+                        <button id="pendingListingsTab" class="px-4 py-2 border rounded-md tab-button">Pending</button>
+                    </div>
+                    <button id="addNewListingBtn" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">
+                        <i class="fas fa-plus mr-2"></i> Add New
+                    </button>
+                </div>
+                
+                <div class="overflow-y-auto max-h-96">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Views</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Posted</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200" id="myListingsTable">
+                            <!-- User's listings will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="mt-4 text-center text-gray-500 hidden" id="noListingsMessage">
+                    You don't have any listings yet. Click "Add New" to create your first listing.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Chat Button -->
+    <div class="fixed bottom-6 right-6 hidden" id="floatingChatBtn">
+        <button class="bg-indigo-600 text-white rounded-full p-4 shadow-lg chat-bubble hover:bg-indigo-700 transition duration-300">
+            <i class="fas fa-comment-dots text-xl"></i>
+        </button>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+        // Enhanced categories with Real Estate and Vehicle subcategories
+        const categories = {
+            "🏠 Real Estate": {
+                "🏘️ By Property Type": [
+                    "Residential - House & Lot",
+                    "Residential - Condominium",
+                    "Residential - Apartment",
+                    "Residential - Townhouse",
+                    "Residential - Duplex/Triplex",
+                    "Residential - Studio Unit",
+                    "Residential - Boarding House/Dormitory",
+                    "Commercial - Office Space",
+                    "Commercial - Commercial Building",
+                    "Commercial - Retail Space/Storefront",
+                    "Commercial - Warehouse",
+                    "Commercial - Coworking Space",
+                    "Industrial - Factory/Plant",
+                    "Industrial - Industrial Lot",
+                    "Industrial - Storage Facility",
+                    "Land - Residential Lot",
+                    "Land - Commercial Lot",
+                    "Land - Agricultural Lot",
+                    "Land - Farm Lot",
+                    "Land - Beachfront Lot",
+                    "Land - Raw Land",
+                    "Leisure & Tourism - Resort",
+                    "Leisure & Tourism - Vacation Home",
+                    "Leisure & Tourism - Hotel/Bed & Breakfast",
+                    "Parking - Parking Space",
+                    "Parking - Garage"
+                ],
+                "💰 By Transaction Type": [
+                    "For Sale",
+                    "For Rent/Lease",
+                    "Pre-Selling",
+                    "Foreclosed",
+                    "Rent-to-Own"
+                ],
+                "📍 By Location or Use": [
+                    "Urban",
+                    "Suburban",
+                    "Rural",
+                    "Near Schools",
+                    "Near Business District",
+                    "Near Transportation Hubs",
+                    "Gated Community"
+                ],
+                "🧱 By Features/Special Categories": [
+                    "Fully Furnished",
+                    "Semi-Furnished",
+                    "Unfurnished",
+                    "With Swimming Pool",
+                    "Pet-Friendly",
+                    "With Garden/Yard",
+                    "With Parking",
+                    "With Balcony/Terrace",
+                    "Smart Home",
+                    "Newly Renovated"
+                ]
+            },
+            "🚗 Vehicles": {
+                "🚗 Main Vehicle Categories": [
+                    "Cars",
+                    "Motorcycles",
+                    "Trucks",
+                    "SUVs",
+                    "Vans & Minivans",
+                    "Pickups",
+                    "Buses",
+                    "Tricycles / Tuk-Tuks",
+                    "Bicycles & E-Bikes",
+                    "Electric Vehicles (EVs)",
+                    "ATVs / UTVs (All-Terrain / Utility Vehicles)",
+                    "Boats & Watercraft",
+                    "Heavy Equipment / Machinery",
+                    "Trailers"
+                ],
+                "🛒 By Transaction Type": [
+                    "For Sale",
+                    "For Rent",
+                    "For Lease",
+                    "Brand New",
+                    "Used / Second-Hand"
+                ],
+                "🏷️ By Fuel Type": [
+                    "Gasoline",
+                    "Diesel",
+                    "Hybrid",
+                    "Electric",
+                    "LPG / CNG"
+                ],
+                "⚙️ By Transmission": [
+                    "Manual",
+                    "Automatic",
+                    "CVT",
+                    "Semi-Automatic"
+                ],
+                "🎯 By Use or Purpose": [
+                    "Private Vehicle",
+                    "Commercial Vehicle",
+                    "Delivery / Cargo",
+                    "Public Transport",
+                    "Off-Road",
+                    "Construction / Industrial"
+                ]
+            },
+            "📱 Electronics": ["Phones", "Laptops", "Audio", "Cameras", "Accessories"],
+            "👕 Clothing": ["Men's Wear", "Women's Wear", "Kids", "Accessories", "Footwear"],
+            "🛋️ Home": ["Furniture", "Decor", "Kitchenware", "Garden", "Appliances"],
+            "💍 Jewelry": ["Necklaces", "Rings", "Bracelets", "Watches", "Earrings"],
+            "💄 Beauty": ["Skincare", "Makeup", "Haircare", "Fragrances", "Tools"],
+            "🎁 Other": ["Books", "Sports", "Toys", "Collectibles", "Other"]
+        };
+
+        // Sample data for demonstration
+        const sampleProducts = [
+            {
+                id: 1,
+                name: "Wireless Headphones",
+                price: 2499,
+                mainCategory: "📱 Electronics",
+                subCategory: "Audio",
+                description: "Brand new wireless headphones with noise cancellation. Comes with original box and warranty.",
+                images: [
+                    "https://images.unsplash.com/photo-1546868871-7041f2a55e12?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&q=80",
+                    "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&q=80"
+                ],
+                seller: {
+                    name: "TechGuru",
+                    avatar: "https://randomuser.me/api/portraits/men/32.jpg",
+                    memberSince: "Jan 2022",
+                    rating: 4.8,
+                    id: "user_2",
+                    status: "active"
+                },
+                contactInfo: "techguru@example.com",
+                location: "Manila",
+                datePosted: "2023-05-15",
+                status: "active",
+                views: 124,
+                likes: 8
+            },
+            {
+                id: 2,
+                name: "3-Bedroom Condominium in Makati",
+                price: 8500000,
+                mainCategory: "🏠 Real Estate",
+                subCategory: "Residential - Condominium",
+                description: "Luxury 3-bedroom condo in the heart of Makati CBD. 85 sqm floor area, fully furnished with premium appliances. Amenities include swimming pool, gym, and 24/7 security.",
+                images: [
+                    "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&q=80",
+                    "https://images.unsplash.com/photo-1493809842364-78817add7ffb?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&q=80"
+                ],
+                seller: {
+                    name: "PrimeProperties",
+                    avatar: "https://randomuser.me/api/portraits/women/44.jpg",
+                    memberSince: "Mar 2021",
+                    rating: 4.9,
+                    id: "user_3",
+                    status: "active"
+                },
+                contactInfo: "09178889999",
+                location: "Makati City",
+                floorArea: 85,
+                bedrooms: 3,
+                bathrooms: 2,
+                parkingSpaces: 1,
+                yearBuilt: 2018,
+                coordinates: { lat: 14.5547, lng: 121.0244 },
+                datePosted: "2023-05-10",
+                status: "active",
+                views: 356,
+                likes: 24
+            },
+            {
+                id: 3,
+                name: "Commercial Space in Ortigas",
+                price: 15000000,
+                mainCategory: "🏠 Real Estate",
+                subCategory: "Commercial - Retail Space/Storefront",
+                description: "Prime commercial space in Ortigas business district. 120 sqm floor area, high foot traffic location. Suitable for retail or office use.",
+                images: [
+                    "https://images.unsplash.com/photo-1493809842364-78817add7ffb?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&q=80"
+                ],
+                seller: {
+                    name: "CommercialSpacesPH",
+                    avatar: "https://randomuser.me/api/portraits/men/67.jpg",
+                    memberSince: "Aug 2020",
+                    rating: 4.7,
+                    id: "user_4",
+                    status: "active"
+                },
+                contactInfo: "commercialspaces@example.com",
+                location: "Ortigas Center",
+                floorArea: 120,
+                coordinates: { lat: 14.5895, lng: 121.0597 },
+                datePosted: "2023-05-05",
+                status: "pending",
+                views: 189,
+                likes: 12
+            },
+            {
+                id: 4,
+                name: "Toyota Fortuner 2021",
+                price: 1500000,
+                mainCategory: "🚗 Vehicles",
+                subCategory: "SUVs",
+                description: "Toyota Fortuner 2021 model, well maintained, no accidents, complete papers. Diesel engine, automatic transmission, 7-seater.",
+                images: [
+                    "https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&q=80"
+                ],
+                seller: {
+                    name: "AutoDealerPH",
+                    avatar: "https://randomuser.me/api/portraits/men/22.jpg",
+                    memberSince: "Jun 2020",
+                    rating: 4.8,
+                    id: "user_5",
+                    status: "active"
+                },
+                contactInfo: "09178887777",
+                location: "Quezon City",
+                vehicleBrand: "Toyota",
+                vehicleModel: "Fortuner",
+                vehicleYear: 2021,
+                vehicleMileage: 25000,
+                vehicleFuelType: "Diesel",
+                vehicleTransmission: "Automatic",
+                vehicleColor: "White",
+                vehicleSeats: 7,
+                datePosted: "2023-05-12",
+                status: "sold",
+                views: 421,
+                likes: 38
+            }
+        ];
+
+        // Sample users data
+        const sampleUsers = [
+            {
+                id: "user_1",
+                name: "Admin User",
+                email: "admin@example.com",
+                avatar: "https://randomuser.me/api/portraits/men/1.jpg",
+                memberSince: "Jan 2020",
+                role: "admin",
+                status: "active",
+                facebookUrl: "",
+                phone: "09171234567",
+                location: "Manila"
+            },
+            {
+                id: "user_2",
+                name: "TechGuru",
+                email: "techguru@example.com",
+                avatar: "https://randomuser.me/api/portraits/men/32.jpg",
+                memberSince: "Jan 2022",
+                role: "user",
+                status: "active",
+                facebookUrl: "",
+                phone: "09172345678",
+                location: "Manila"
+            },
+            {
+                id: "user_3",
+                name: "PrimeProperties",
+                email: "primeproperties@example.com",
+                avatar: "https://randomuser.me/api/portraits/women/44.jpg",
+                memberSince: "Mar 2021",
+                role: "user",
+                status: "active",
+                facebookUrl: "https://facebook.com/primeproperties",
+                phone: "09178889999",
+                location: "Makati City"
+            },
+            {
+                id: "user_4",
+                name: "CommercialSpacesPH",
+                email: "commercialspaces@example.com",
+                avatar: "https://randomuser.me/api/portraits/men/67.jpg",
+                memberSince: "Aug 2020",
+                role: "user",
+                status: "active",
+                facebookUrl: "",
+                phone: "09179998888",
+                location: "Ortigas"
+            },
+            {
+                id: "user_5",
+                name: "AutoDealerPH",
+                email: "autodealer@example.com",
+                avatar: "https://randomuser.me/api/portraits/men/22.jpg",
+                memberSince: "Jun 2020",
+                role: "user",
+                status: "inactive",
+                facebookUrl: "https://facebook.com/autodealerph",
+                phone: "09178887777",
+                location: "Quezon City"
+            }
+        ];
+
+        // Sample user activities
+        const sampleActivities = [
+            {
+                userId: "user_2",
+                userName: "TechGuru",
+                userAvatar: "https://randomuser.me/api/portraits/men/32.jpg",
+                activity: "Posted a new listing: Wireless Headphones",
+                timestamp: "2023-05-15T10:30:00Z"
+            },
+            {
+                userId: "user_3",
+                userName: "PrimeProperties",
+                userAvatar: "https://randomuser.me/api/portraits/women/44.jpg",
+                activity: "Updated listing: 3-Bedroom Condominium in Makati",
+                timestamp: "2023-05-12T14:45:00Z"
+            },
+            {
+                userId: "user_4",
+                userName: "CommercialSpacesPH",
+                userAvatar: "https://randomuser.me/api/portraits/men/67.jpg",
+                activity: "Posted a new listing: Commercial Space in Ortigas",
+                timestamp: "2023-05-10T09:15:00Z"
+            },
+            {
+                userId: "user_5",
+                userName: "AutoDealerPH",
+                userAvatar: "https://randomuser.me/api/portraits/men/22.jpg",
+                activity: "Marked listing as sold: Toyota Fortuner 2021",
+                timestamp: "2023-05-08T16:20:00Z"
+            },
+            {
+                userId: "user_2",
+                userName: "TechGuru",
+                userAvatar: "https://randomuser.me/api/portraits/men/32.jpg",
+                activity: "Received a new message about Wireless Headphones",
+                timestamp: "2023-05-05T11:10:00Z"
+            }
+        ];
+
+        // Initialize Facebook SDK
+        window.fbAsyncInit = function() {
+            FB.init({
+                appId: 'YOUR_FACEBOOK_APP_ID', // Replace with your Facebook App ID
+                cookie: true,
+                xfbml: true,
+                version: 'v12.0'
+            });
+        };
+
+        // Initialize Google Sign-In
+        function initializeGoogleSignIn() {
+            google.accounts.id.initialize({
+                client_id: 'YOUR_GOOGLE_CLIENT_ID', // Replace with your Google Client ID
+                callback: handleGoogleSignIn
+            });
+            
+            // Render Google Sign-In button
+            google.accounts.id.renderButton(
+                document.getElementById('googleSignInBtn'),
+                { theme: 'outline', size: 'large', width: '100%' }
+            );
+            
+            google.accounts.id.renderButton(
+                document.getElementById('googleRegisterBtn'),
+                { theme: 'outline', size: 'large', width: '100%' }
+            );
+        }
+
+        // Handle Google Sign-In
+        function handleGoogleSignIn(response) {
+            // Decode the credential response
+            const responsePayload = JSON.parse(atob(response.credential.split('.')[1]));
+            
+            console.log('Google sign-in response:', responsePayload);
+            
+            // Create user object with Google data
+            const user = {
+                name: responsePayload.name,
+                email: responsePayload.email,
+                avatar: responsePayload.picture,
+                provider: 'google',
+                providerId: responsePayload.sub
+            };
+            
+            // Handle successful login
+            handleSocialLoginSuccess(user);
+        }
+
+        // Handle Facebook Login
+        function handleFacebookLogin() {
+            FB.login(function(response) {
+                if (response.authResponse) {
+                    console.log('Facebook login successful', response);
+                    
+                    // Get user details
+                    FB.api('/me', { fields: 'name,email,picture' }, function(response) {
+                        const user = {
+                            name: response.name,
+                            email: response.email,
+                            avatar: response.picture?.data?.url || 'https://randomuser.me/api/portraits/men/32.jpg',
+                            provider: 'facebook',
+                            providerId: response.id
+                        };
+                        
+                        handleSocialLoginSuccess(user);
+                    });
+                } else {
+                    console.log('User cancelled login or did not fully authorize.');
+                }
+            }, { scope: 'public_profile,email' });
+        }
+
+        // Handle Apple Login
+        function handleAppleLogin() {
+            // In a real implementation, you would use Apple's JS SDK
+            // This is a simplified version for demonstration
+            console.log('Apple login initiated');
+            
+            // For demo purposes, we'll simulate a successful login
+            const user = {
+                name: 'Apple User',
+                email: 'user@apple.com',
+                avatar: 'https://randomuser.me/api/portraits/men/32.jpg',
+                provider: 'apple',
+                providerId: 'apple_' + Math.random().toString(36).substr(2, 9)
+            };
+            
+            handleSocialLoginSuccess(user);
+        }
+
+        // Handle successful social login
+        function handleSocialLoginSuccess(user) {
+            console.log('Social login success:', user);
+            
+            // Check if this is the admin user
+            if (user.email === "admin@example.com" || (user.email === "admin" && document.getElementById('password').value === "admin@0710")) {
+                user.role = "admin";
+                user.id = "user_1";
+                user.name = "Admin User";
+                user.avatar = "https://randomuser.me/api/portraits/men/1.jpg";
+                user.memberSince = "Jan 2020";
+            } else {
+                user.role = "user";
+                user.id = "user_" + Math.floor(Math.random() * 1000);
+                user.memberSince = new Date().toLocaleString('default', { month: 'short' }) + " " + new Date().getFullYear();
+            }
+            
+            // Save user to localStorage
+            localStorage.setItem('currentUser', JSON.stringify(user));
+            
+            // Hide login modal and show main content
+            document.getElementById('loginModal').classList.add('hidden');
+            document.getElementById('registerModal').classList.add('hidden');
+            document.getElementById('mainNav').classList.remove('hidden');
+            document.getElementById('mainContent').classList.remove('hidden');
+            document.getElementById('floatingChatBtn').classList.remove('hidden');
+            
+            // Update user menu with social login info
+            const userMenuBtn = document.getElementById('userMenuBtn');
+            userMenuBtn.querySelector('img').src = user.avatar;
+            userMenuBtn.querySelector('span').textContent = user.name;
+            
+            // Show admin badge if user is admin
+            if (user.role === "admin") {
+                document.getElementById('adminBadge').classList.remove('hidden');
+                document.getElementById('adminDashboardLink').classList.remove('hidden');
+            }
+            
+            // Load marketplace items
+            displayMarketplaceItems();
+        }
+
+        // Handle email/password registration
+        document.getElementById('registerForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('registerName').value;
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+            const confirmPassword = document.getElementById('registerConfirmPassword').value;
+            
+            // Simple validation
+            if (password !== confirmPassword) {
+                document.getElementById('registerError').textContent = 'Passwords do not match';
+                document.getElementById('registerError').classList.remove('hidden');
+                return;
+            }
+            
+            if (password.length < 6) {
+                document.getElementById('registerError').textContent = 'Password must be at least 6 characters';
+                document.getElementById('registerError').classList.remove('hidden');
+                return;
+            }
+            
+            // Create user object
+            const user = {
+                name: name,
+                email: email,
+                avatar: 'https://randomuser.me/api/portraits/men/32.jpg', // Default avatar
+                provider: 'email',
+                role: 'user',
+                id: 'user_' + Math.floor(Math.random() * 1000),
+                memberSince: new Date().toLocaleString('default', { month: 'short' }) + " " + new Date().getFullYear()
+            };
+            
+            // Save user to localStorage (in a real app, you would send to server)
+            localStorage.setItem('currentUser', JSON.stringify(user));
+            localStorage.setItem('userCredentials', JSON.stringify({ email, password }));
+            
+            // Hide register modal and show main content
+            document.getElementById('registerModal').classList.add('hidden');
+            document.getElementById('mainNav').classList.remove('hidden');
+            document.getElementById('mainContent').classList.remove('hidden');
+            document.getElementById('floatingChatBtn').classList.remove('hidden');
+            
+            // Update user menu
+            const userMenuBtn = document.getElementById('userMenuBtn');
+            userMenuBtn.querySelector('img').src = user.avatar;
+            userMenuBtn.querySelector('span').textContent = user.name;
+            
+            // Load marketplace items
+            displayMarketplaceItems();
+        });
+
+        // Handle email/password login
+        document.getElementById('loginBtn').addEventListener('click', function() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            // Check for admin login
+            if (email === "admin" && password === "admin@0710") {
+                const adminUser = {
+                    id: "user_1",
+                    name: "Admin User",
+                    email: "admin@example.com",
+                    avatar: "https://randomuser.me/api/portraits/men/1.jpg",
+                    provider: "email",
+                    role: "admin",
+                    memberSince: "Jan 2020"
+                };
+                
+                localStorage.setItem('currentUser', JSON.stringify(adminUser));
+                
+                document.getElementById('loginModal').classList.add('hidden');
+                document.getElementById('mainNav').classList.remove('hidden');
+                document.getElementById('mainContent').classList.remove('hidden');
+                document.getElementById('floatingChatBtn').classList.remove('hidden');
+                document.getElementById('adminBadge').classList.remove('hidden');
+                document.getElementById('adminDashboardLink').classList.remove('hidden');
+                
+                const userMenuBtn = document.getElementById('userMenuBtn');
+                userMenuBtn.querySelector('img').src = adminUser.avatar;
+                userMenuBtn.querySelector('span').textContent = adminUser.name;
+                
+                displayMarketplaceItems();
+                return;
+            }
+            
+            // Check credentials (in a real app, you would verify against server)
+            const storedCredentials = JSON.parse(localStorage.getItem('userCredentials')) || {};
+            
+            if (email === storedCredentials.email && password === storedCredentials.password) {
+                const user = JSON.parse(localStorage.getItem('currentUser')) || {
+                    name: 'Demo User',
+                    email: email,
+                    avatar: 'https://randomuser.me/api/portraits/men/32.jpg',
+                    provider: 'email',
+                    role: 'user',
+                    id: 'user_' + Math.floor(Math.random() * 1000),
+                    memberSince: new Date().toLocaleString('default', { month: 'short' }) + " " + new Date().getFullYear()
+                };
+                
+                // Hide login modal and show main content
+                document.getElementById('loginModal').classList.add('hidden');
+                document.getElementById('mainNav').classList.remove('hidden');
+                document.getElementById('mainContent').classList.remove('hidden');
+                document.getElementById('floatingChatBtn').classList.remove('hidden');
+                
+                // Update user menu
+                const userMenuBtn = document.getElementById('userMenuBtn');
+                userMenuBtn.querySelector('img').src = user.avatar;
+                userMenuBtn.querySelector('span').textContent = user.name;
+                
+                // Load marketplace items
+                displayMarketplaceItems();
+            } else {
+                document.getElementById('loginError').textContent = 'Invalid email or password';
+                document.getElementById('loginError').classList.remove('hidden');
+            }
+        });
+
+        // Toggle between login and register modals
+        document.getElementById('showRegisterBtn').addEventListener('click', function() {
+            document.getElementById('loginModal').classList.add('hidden');
+            document.getElementById('registerModal').classList.remove('hidden');
+        });
+        
+        document.getElementById('showLoginBtn').addEventListener('click', function() {
+            document.getElementById('registerModal').classList.add('hidden');
+            document.getElementById('loginModal').classList.remove('hidden');
+        });
+
+        // Social login button event listeners
+        document.getElementById('facebookSignInBtn').addEventListener('click', handleFacebookLogin);
+        document.getElementById('facebookRegisterBtn').addEventListener('click', handleFacebookLogin);
+        document.getElementById('appleSignInBtn').addEventListener('click', handleAppleLogin);
+        document.getElementById('appleRegisterBtn').addEventListener('click', handleAppleLogin);
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize Google Sign-In when the page loads
+            if (typeof google !== 'undefined') {
+                initializeGoogleSignIn();
+            } else {
+                // Retry after a delay if Google library isn't loaded yet
+                setTimeout(initializeGoogleSignIn, 500);
+            }
+            
+            // Show login modal by default
+            document.getElementById('loginModal').classList.remove('hidden');
+            
+            // Initialize with sample data if localStorage is empty
+            if (!localStorage.getItem('products')) {
+                localStorage.setItem('products', JSON.stringify(sampleProducts));
+            }
+            
+            if (!localStorage.getItem('users')) {
+                localStorage.setItem('users', JSON.stringify(sampleUsers));
+            }
+            
+            if (!localStorage.getItem('activities')) {
+                localStorage.setItem('activities', JSON.stringify(sampleActivities));
+            }
+            
+            // Initialize saved searches if empty
+            if (!localStorage.getItem('savedSearches')) {
+                localStorage.setItem('savedSearches', JSON.stringify([]));
+            }
+            
+            // Check for existing user session
+            const currentUser = localStorage.getItem('currentUser');
+            if (currentUser) {
+                document.getElementById('loginModal').classList.add('hidden');
+                document.getElementById('mainNav').classList.remove('hidden');
+                document.getElementById('mainContent').classList.remove('hidden');
+                document.getElementById('floatingChatBtn').classList.remove('hidden');
+                
+                const user = JSON.parse(currentUser);
+                const userMenuBtn = document.getElementById('userMenuBtn');
+                userMenuBtn.querySelector('img').src = user.avatar;
+                userMenuBtn.querySelector('span').textContent = user.name;
+                
+                if (user.role === "admin") {
+                    document.getElementById('adminBadge').classList.remove('hidden');
+                    document.getElementById('adminDashboardLink').classList.remove('hidden');
+                }
+                
+                displayMarketplaceItems();
+            }
+            
+            // Set up event listeners
+            setupEventListeners();
+        });
+
+        // Set up all event listeners
+        function setupEventListeners() {
+            // User menu dropdown
+            document.getElementById('userMenuBtn').addEventListener('click', function() {
+                document.getElementById('userDropdown').classList.toggle('hidden');
+            });
+            
+            // Logout functionality
+            document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+            
+            // Sell item button
+            document.getElementById('sellItemBtn').addEventListener('click', function() {
+                document.getElementById('sellItemModal').classList.remove('hidden');
+            });
+            
+            // Saved searches button
+            document.getElementById('savedSearchesBtn').addEventListener('click', function() {
+                showSavedSearches();
+            });
+            
+            // Close saved searches modal
+            document.getElementById('closeSavedSearches').addEventListener('click', function() {
+                document.getElementById('savedSearchesModal').classList.add('hidden');
+            });
+            
+            // Save current search button
+            document.getElementById('saveCurrentSearchBtn').addEventListener('click', saveCurrentSearch);
+            
+            // Close sell item modal
+            document.getElementById('closeSellModal').addEventListener('click', function() {
+                document.getElementById('sellItemModal').classList.add('hidden');
+            });
+            
+            // Cancel product form
+            document.getElementById('cancelProduct').addEventListener('click', function() {
+                document.getElementById('sellItemModal').classList.add('hidden');
+                document.getElementById('productForm').reset();
+                document.getElementById('imagePreviewContainer').innerHTML = '';
+                document.getElementById('realEstateFields').classList.add('hidden');
+                document.getElementById('vehicleFields').classList.add('hidden');
+            });
+            
+            // Close product detail modal
+            document.getElementById('closeDetailModal').addEventListener('click', function() {
+                document.getElementById('productDetailModal').classList.add('hidden');
+            });
+            
+            // Mortgage calculator button
+            document.getElementById('mortgageCalculatorBtn')?.addEventListener('click', function() {
+                const price = parseInt(document.getElementById('detailPrice').textContent.replace(/[^\d]/g, ''));
+                document.getElementById('mortgagePrice').value = price;
+                document.getElementById('mortgageCalculatorModal').classList.remove('hidden');
+                calculateMortgage();
+            });
+            
+            // Close mortgage calculator
+            document.getElementById('closeMortgageCalculator')?.addEventListener('click', function() {
+                document.getElementById('mortgageCalculatorModal').classList.add('hidden');
+            });
+            
+            // Calculate mortgage button
+            document.getElementById('calculateMortgageBtn')?.addEventListener('click', calculateMortgage);
+            
+            // Mortgage calculator inputs
+            const mortgageInputs = ['mortgagePrice', 'downPaymentPercent', 'loanTerm', 'interestRate'];
+            mortgageInputs.forEach(id => {
+                document.getElementById(id)?.addEventListener('input', calculateMortgage);
+            });
+            
+            // Contact seller button
+            document.getElementById('contactSellerBtn').addEventListener('click', function() {
+                alert('This would open a chat with the seller in a real implementation.');
+            });
+            
+            // Floating chat button
+            document.getElementById('floatingChatBtn').addEventListener('click', function() {
+                alert('Chat interface would open here.');
+            });
+            
+            // Handle image upload preview
+            document.getElementById('productImages').addEventListener('change', handleImageUpload);
+            
+            // Form submission
+            document.getElementById('productForm').addEventListener('submit', handleProductSubmit);
+            
+            // Category filter
+            document.getElementById('categoryFilter').addEventListener('change', filterProducts);
+            
+            // Sort by
+            document.getElementById('sortBy').addEventListener('change', filterProducts);
+            
+            // Search functionality
+            document.getElementById('searchInput').addEventListener('keyup', function(e) {
+                if (e.key === 'Enter') {
+                    filterProducts();
+                }
+            });
+            
+            // Search button
+            document.getElementById('searchBtn').addEventListener('click', filterProducts);
+            
+            // Tab switching
+            document.getElementById('allTab').addEventListener('click', () => switchTab('all'));
+            document.getElementById('realEstateTab').addEventListener('click', () => switchTab('realEstate'));
+            document.getElementById('vehiclesTab').addEventListener('click', () => switchTab('vehicles'));
+            document.getElementById('electronicsTab').addEventListener('click', () => switchTab('electronics'));
+            document.getElementById('fashionTab').addEventListener('click', () => switchTab('fashion'));
+            
+            // Property address input for map
+            document.getElementById('propertyAddress')?.addEventListener('change', function() {
+                updatePropertyMap(this.value);
+            });
+            
+            // Admin dashboard link
+            document.getElementById('adminDashboardLink').addEventListener('click', function(e) {
+                e.preventDefault();
+                showAdminDashboard();
+            });
+            
+            // Close admin dashboard
+            document.getElementById('closeAdminDashboard').addEventListener('click', function() {
+                document.getElementById('adminDashboardModal').classList.add('hidden');
+            });
+            
+            // User search in admin dashboard
+            document.getElementById('userSearchInput').addEventListener('keyup', function() {
+                filterUsersInAdminDashboard();
+            });
+            
+            // Profile link
+            document.getElementById('profileLink').addEventListener('click', function(e) {
+                e.preventDefault();
+                showUserProfile();
+            });
+            
+            // Close user profile
+            document.getElementById('closeUserProfile').addEventListener('click', function() {
+                document.getElementById('userProfileModal').classList.add('hidden');
+            });
+            
+            // Cancel profile changes
+            document.getElementById('cancelProfileChanges').addEventListener('click', function() {
+                document.getElementById('userProfileModal').classList.add('hidden');
+            });
+            
+            // Change avatar button
+            document.getElementById('changeAvatarBtn').addEventListener('click', function() {
+                document.getElementById('avatarUpload').click();
+            });
+            
+            // Avatar upload
+            document.getElementById('avatarUpload').addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        document.getElementById('profileAvatar').src = event.target.result;
+                        
+                        // Update avatar in current user data
+                        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+                        currentUser.avatar = event.target.result;
+                        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                        
+                        // Update avatar in users list
+                        const users = JSON.parse(localStorage.getItem('users')) || [];
+                        const userIndex = users.findIndex(u => u.id === currentUser.id);
+                        if (userIndex !== -1) {
+                            users[userIndex].avatar = event.target.result;
+                            localStorage.setItem('users', JSON.stringify(users));
+                        }
+                        
+                        // Update avatar in UI
+                        document.getElementById('userMenuBtn').querySelector('img').src = event.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+            
+            // Profile form submission
+            document.getElementById('profileForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+                const users = JSON.parse(localStorage.getItem('users')) || [];
+                const userIndex = users.findIndex(u => u.id === currentUser.id);
+                
+                // Update user data
+                currentUser.name = document.getElementById('profileFullName').value;
+                currentUser.phone = document.getElementById('profilePhone').value;
+                currentUser.facebookUrl = document.getElementById('profileFacebook').value;
+                currentUser.location = document.getElementById('profileLocation').value;
+                
+                // Update current user in localStorage
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                
+                // Update user in users list
+                if (userIndex !== -1) {
+                    users[userIndex] = currentUser;
+                    localStorage.setItem('users', JSON.stringify(users));
+                }
+                
+                // Update UI
+                document.getElementById('userMenuBtn').querySelector('span').textContent = currentUser.name;
+                document.getElementById('profileName').textContent = currentUser.name;
+                
+                // Handle password change if fields are filled
+                const currentPassword = document.getElementById('currentPassword').value;
+                const newPassword = document.getElementById('newPassword').value;
+                const confirmNewPassword = document.getElementById('confirmNewPassword').value;
+                
+                if (currentPassword || newPassword || confirmNewPassword) {
+                    if (newPassword !== confirmNewPassword) {
+                        alert('New passwords do not match');
+                        return;
+                    }
+                    
+                    if (newPassword.length < 6) {
+                        alert('Password must be at least 6 characters');
+                        return;
+                    }
+                    
+                    // In a real app, you would verify current password with server
+                    alert('Password changed successfully (demo)');
+                    
+                    // Clear password fields
+                    document.getElementById('currentPassword').value = '';
+                    document.getElementById('newPassword').value = '';
+                    document.getElementById('confirmNewPassword').value = '';
+                }
+                
+                // Close modal
+                document.getElementById('userProfileModal').classList.add('hidden');
+            });
+            
+            // My listings link
+            document.getElementById('myListingsLink').addEventListener('click', function(e) {
+                e.preventDefault();
+                showMyListings();
+            });
+            
+            // Close my listings modal
+            document.getElementById('closeMyListings').addEventListener('click', function() {
+                document.getElementById('myListingsModal').classList.add('hidden');
+            });
+            
+            // Add new listing button
+            document.getElementById('addNewListingBtn').addEventListener('click', function() {
+                document.getElementById('myListingsModal').classList.add('hidden');
+                document.getElementById('sellItemModal').classList.remove('hidden');
+            });
+            
+            // Listing tabs in my listings modal
+            document.getElementById('allListingsTab').addEventListener('click', function() {
+                document.querySelectorAll('#myListingsModal .tab-button').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                this.classList.add('active');
+                filterMyListings('all');
+            });
+            
+            document.getElementById('activeListingsTab').addEventListener('click', function() {
+                document.querySelectorAll('#myListingsModal .tab-button').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                this.classList.add('active');
+                filterMyListings('active');
+            });
+            
+            document.getElementById('soldListingsTab').addEventListener('click', function() {
+                document.querySelectorAll('#myListingsModal .tab-button').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                this.classList.add('active');
+                filterMyListings('sold');
+            });
+            
+            document.getElementById('pendingListingsTab').addEventListener('click', function() {
+                document.querySelectorAll('#myListingsModal .tab-button').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                this.classList.add('active');
+                filterMyListings('pending');
+            });
+            
+            // Admin controls in product detail
+            document.getElementById('deletePostBtn')?.addEventListener('click', deleteCurrentPost);
+            document.getElementById('disableUserBtn')?.addEventListener('click', disableCurrentUser);
+        }
+
+        // Handle user logout
+        function handleLogout() {
+            localStorage.removeItem('currentUser');
+            document.getElementById('loginModal').classList.remove('hidden');
+            document.getElementById('mainNav').classList.add('hidden');
+            document.getElementById('mainContent').classList.add('hidden');
+            document.getElementById('floatingChatBtn').classList.add('hidden');
+            document.getElementById('userDropdown').classList.add('hidden');
+            document.getElementById('adminBadge').classList.add('hidden');
+            document.getElementById('adminDashboardLink').classList.add('hidden');
+            
+            // Clear form fields
+            document.getElementById('productForm').reset();
+            document.getElementById('imagePreviewContainer').innerHTML = '';
+        }
+
+        // Toggle category-specific fields based on selection
+        function toggleCategorySpecificFields() {
+            const mainCategory = document.getElementById('mainCategory').value;
+            const realEstateFields = document.getElementById('realEstateFields');
+            const vehicleFields = document.getElementById('vehicleFields');
+            
+            realEstateFields.classList.add('hidden');
+            vehicleFields.classList.add('hidden');
+            
+            if (mainCategory === "🏠 Real Estate") {
+                realEstateFields.classList.remove('hidden');
+            } else if (mainCategory === "🚗 Vehicles") {
+                vehicleFields.classList.remove('hidden');
+            }
+        }
+
+        // Update property map based on address
+        function updatePropertyMap(address) {
+            if (!address) return;
+            
+            const mapElement = document.getElementById('propertyMap');
+            mapElement.classList.remove('hidden');
+            
+            // In a real implementation, you would use a geocoding service here
+            // For demo purposes, we'll just show a map centered on Manila
+            const map = L.map('propertyMap').setView([14.5995, 120.9842], 13);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+            
+            // Add a marker at the center
+            L.marker([14.5995, 120.9842]).addTo(map)
+                .bindPopup(address)
+                .openPopup();
+        }
+
+        // Show saved searches
+        function showSavedSearches() {
+            const savedSearches = JSON.parse(localStorage.getItem('savedSearches')) || [];
+            const container = document.getElementById('savedSearchesList');
+            
+            if (savedSearches.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-4">You don\'t have any saved searches yet.</p>';
+            } else {
+                container.innerHTML = savedSearches.map(search => `
+                    <div class="border rounded-md p-3 mb-2 flex justify-between items-center">
+                        <div>
+                            <h4 class="font-medium">${search.name}</h4>
+                            <p class="text-sm text-gray-500">${search.query || 'All items'}</p>
+                        </div>
+                        <button class="text-red-500 hover:text-red-700" onclick="deleteSavedSearch(${search.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                `).join('');
+            }
+            
+            document.getElementById('savedSearchesModal').classList.remove('hidden');
+        }
+
+        // Save current search
+        function saveCurrentSearch() {
+            const name = document.getElementById('searchName').value.trim();
+            if (!name) {
+                alert('Please enter a name for this search');
+                return;
+            }
+            
+            const savedSearches = JSON.parse(localStorage.getItem('savedSearches')) || [];
+            const searchQuery = document.getElementById('searchInput').value;
+            const category = document.getElementById('categoryFilter').value;
+            
+            const newSearch = {
+                id: Date.now(),
+                name,
+                query: searchQuery,
+                category,
+                dateSaved: new Date().toISOString()
+            };
+            
+            savedSearches.push(newSearch);
+            localStorage.setItem('savedSearches', JSON.stringify(savedSearches));
+            
+            document.getElementById('searchName').value = '';
+            showSavedSearches();
+        }
+
+        // Delete saved search
+        function deleteSavedSearch(id) {
+            let savedSearches = JSON.parse(localStorage.getItem('savedSearches')) || [];
+            savedSearches = savedSearches.filter(search => search.id !== id);
+            localStorage.setItem('savedSearches', JSON.stringify(savedSearches));
+            showSavedSearches();
+        }
+
+        // Calculate mortgage
+        function calculateMortgage() {
+            const price = parseFloat(document.getElementById('mortgagePrice').value) || 0;
+            const downPaymentPercent = parseFloat(document.getElementById('downPaymentPercent').value) || 0;
+            const loanTerm = parseFloat(document.getElementById('loanTerm').value) || 1;
+            const interestRate = parseFloat(document.getElementById('interestRate').value) || 0;
+            
+            const downPaymentAmount = price * (downPaymentPercent / 100);
+            const loanAmount = price - downPaymentAmount;
+            const monthlyRate = interestRate / 100 / 12;
+            const payments = loanTerm * 12;
+            
+            let monthlyPayment = 0;
+            let totalInterest = 0;
+            
+            if (monthlyRate > 0) {
+                monthlyPayment = (loanAmount * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -payments));
+                totalInterest = (monthlyPayment * payments) - loanAmount;
+            } else {
+                monthlyPayment = loanAmount / payments;
+                totalInterest = 0;
+            }
+            
+            document.getElementById('downPaymentAmount').textContent = `₱${downPaymentAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('loanAmount').textContent = `₱${loanAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('monthlyPayment').textContent = `₱${monthlyPayment.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('totalInterest').textContent = `₱${totalInterest.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('totalCost').textContent = `₱${price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        }
+
+        // Switch between tabs
+        function switchTab(tab) {
+            // Update active tab styling
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            switch(tab) {
+                case 'realEstate':
+                    document.getElementById('realEstateTab').classList.add('active');
+                    document.getElementById('categoryFilter').value = "🏠 Real Estate";
+                    break;
+                case 'vehicles':
+                    document.getElementById('vehiclesTab').classList.add('active');
+                    document.getElementById('categoryFilter').value = "🚗 Vehicles";
+                    break;
+                case 'electronics':
+                    document.getElementById('electronicsTab').classList.add('active');
+                    document.getElementById('categoryFilter').value = "📱 Electronics";
+                    break;
+                case 'fashion':
+                    document.getElementById('fashionTab').classList.add('active');
+                    document.getElementById('categoryFilter').value = "👕 Clothing";
+                    break;
+                case 'all':
+                default:
+                    document.getElementById('allTab').classList.add('active');
+                    document.getElementById('categoryFilter').value = "";
+                    break;
+            }
+            
+            filterProducts();
+        }
+
+        // Handle image upload and preview
+        function handleImageUpload(e) {
+            const previewContainer = document.getElementById('imagePreviewContainer');
+            previewContainer.innerHTML = '';
+            
+            const files = e.target.files;
+            if (files.length > 10) {
+                alert('You can only upload up to 10 images');
+                this.value = '';
+                return;
+            }
+            
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                if (!file.type.match('image.*')) continue;
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const previewDiv = document.createElement('div');
+                    previewDiv.style.position = 'relative';
+                    previewDiv.style.display = 'inline-block';
+                    
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.classList.add('preview-image');
+                    
+                    const removeBtn = document.createElement('span');
+                    removeBtn.classList.add('remove-image');
+                    removeBtn.innerHTML = '&times;';
+                    removeBtn.onclick = function() {
+                        previewDiv.remove();
+                        // Remove the file from the input
+                        const newFiles = Array.from(document.getElementById('productImages').files)
+                            .filter((_, index) => index !== i);
+                        const dataTransfer = new DataTransfer();
+                        newFiles.forEach(file => dataTransfer.items.add(file));
+                        document.getElementById('productImages').files = dataTransfer.files;
+                    };
+                    
+                    previewDiv.appendChild(img);
+                    previewDiv.appendChild(removeBtn);
+                    previewContainer.appendChild(previewDiv);
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // Update subcategories based on main category selection
+        function updateSubcategories() {
+            const mainCategory = document.getElementById('mainCategory').value;
+            const subCategorySelect = document.getElementById('subCategory');
+            
+            // Clear existing options
+            subCategorySelect.innerHTML = '<option value="">Select Sub-category</option>';
+            
+            // Add new options if category has subcategories
+            if (mainCategory && categories[mainCategory]) {
+                // Check if this is a nested category (like Real Estate or Vehicles)
+                if (typeof categories[mainCategory] === 'object' && !Array.isArray(categories[mainCategory])) {
+                    // Handle nested categories
+                    for (const [groupName, subCats] of Object.entries(categories[mainCategory])) {
+                        const optgroup = document.createElement('optgroup');
+                        optgroup.label = groupName;
+                        
+                        subCats.forEach(subCat => {
+                            const option = document.createElement('option');
+                            option.value = subCat;
+                            option.textContent = subCat;
+                            optgroup.appendChild(option);
+                        });
+                        
+                        subCategorySelect.appendChild(optgroup);
+                    }
+                } else {
+                    // Handle simple categories
+                    categories[mainCategory].forEach(subCat => {
+                        const option = document.createElement('option');
+                        option.value = subCat;
+                        option.textContent = subCat;
+                        subCategorySelect.appendChild(option);
+                    });
+                }
+            }
+        }
+
+        // Handle product form submission
+        function handleProductSubmit(e) {
+            e.preventDefault();
+            
+            // Get form values
+            const productName = document.getElementById('productName').value;
+            const productPrice = document.getElementById('productPrice').value;
+            const mainCategory = document.getElementById('mainCategory').value;
+            const subCategory = document.getElementById('subCategory').value;
+            const description = document.getElementById('productDescription').value;
+            const contactInfo = document.getElementById('contactInfo').value;
+            const location = document.getElementById('location').value;
+            const images = document.getElementById('productImages').files;
+            
+            // Validate required fields
+            if (!productName || !productPrice || !mainCategory || !description || !contactInfo || images.length === 0) {
+                alert('Please fill in all required fields and upload at least one image');
+                return;
+            }
+            
+            // Get current user
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            
+            // Create product object
+            const product = {
+                id: Date.now(),
+                name: productName,
+                price: parseInt(productPrice),
+                mainCategory,
+                subCategory,
+                description,
+                images: [],
+                seller: {
+                    name: currentUser.name,
+                    avatar: currentUser.avatar,
+                    memberSince: currentUser.memberSince,
+                    rating: 5.0,
+                    id: currentUser.id
+                },
+                contactInfo,
+                location,
+                datePosted: new Date().toISOString().split('T')[0],
+                status: "active",
+                views: 0,
+                likes: 0
+            };
+            
+            // Add real estate specific fields if applicable
+            if (mainCategory === "🏠 Real Estate") {
+                product.floorArea = document.getElementById('floorArea').value;
+                product.lotArea = document.getElementById('lotArea').value;
+                product.bedrooms = document.getElementById('bedrooms').value;
+                product.bathrooms = document.getElementById('bathrooms').value;
+                product.yearBuilt = document.getElementById('yearBuilt').value;
+                product.parkingSpaces = document.getElementById('parkingSpaces').value;
+                
+                // For demo, we'll just use fixed coordinates for Manila
+                product.coordinates = { lat: 14.5995, lng: 120.9842 };
+            }
+            
+            // Add vehicle specific fields if applicable
+            if (mainCategory === "🚗 Vehicles") {
+                product.vehicleBrand = document.getElementById('vehicleBrand').value;
+                product.vehicleModel = document.getElementById('vehicleModel').value;
+                product.vehicleYear = document.getElementById('vehicleYear').value;
+                product.vehicleMileage = document.getElementById('vehicleMileage').value;
+                product.vehicleFuelType = document.getElementById('vehicleFuelType').value;
+                product.vehicleTransmission = document.getElementById('vehicleTransmission').value;
+                product.vehicleColor = document.getElementById('vehicleColor').value;
+                product.vehicleSeats = document.getElementById('vehicleSeats').value;
+            }
+            
+            // Convert images to base64 for local storage
+            const imageReaders = [];
+            for (let i = 0; i < images.length; i++) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    product.images.push(e.target.result);
+                    
+                    // When all images are processed, save the product
+                    if (product.images.length === images.length) {
+                        saveProduct(product);
+                    }
+                };
+                reader.readAsDataURL(images[i]);
+                imageReaders.push(reader);
+            }
+        }
+
+        // Save product to localStorage
+        function saveProduct(product) {
+            let products = JSON.parse(localStorage.getItem('products')) || [];
+            products.unshift(product); // Add new product at beginning
+            localStorage.setItem('products', JSON.stringify(products));
+            
+            // Add to user activities
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            const activities = JSON.parse(localStorage.getItem('activities')) || [];
+            
+            activities.unshift({
+                userId: currentUser.id,
+                userName: currentUser.name,
+                userAvatar: currentUser.avatar,
+                activity: `Posted a new listing: ${product.name}`,
+                timestamp: new Date().toISOString()
+            });
+            
+            localStorage.setItem('activities', JSON.stringify(activities));
+            
+            // Reset form
+            document.getElementById('productForm').reset();
+            document.getElementById('imagePreviewContainer').innerHTML = '';
+            document.getElementById('sellItemModal').classList.add('hidden');
+            document.getElementById('realEstateFields').classList.add('hidden');
+            document.getElementById('vehicleFields').classList.add('hidden');
+            
+            // Refresh marketplace display
+            displayMarketplaceItems();
+            
+            alert('Your item has been listed successfully!');
+        }
+
+        // Display products in marketplace
+        function displayMarketplaceItems() {
+            const products = JSON.parse(localStorage.getItem('products')) || [];
+            const container = document.getElementById('marketplaceItems');
+            container.innerHTML = '';
+            
+            if (products.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 col-span-full text-center py-12">No items found. Be the first to list something!</p>';
+                return;
+            }
+            
+            products.forEach(product => {
+                if (product.status === "inactive") return;
+                
+                const productCard = document.createElement('div');
+                productCard.className = 'bg-white rounded-lg shadow-md overflow-hidden product-card transition duration-300 cursor-pointer';
+                productCard.onclick = () => showProductDetail(product.id);
+                
+                let categorySpecificInfo = '';
+                if (product.mainCategory === "🏠 Real Estate") {
+                    categorySpecificInfo = `
+                        <div class="mt-2 grid grid-cols-2 gap-1 text-xs">
+                            ${product.bedrooms ? `<div><i class="fas fa-bed mr-1"></i> ${product.bedrooms} BR</div>` : ''}
+                            ${product.bathrooms ? `<div><i class="fas fa-bath mr-1"></i> ${product.bathrooms} BA</div>` : ''}
+                            ${product.floorArea ? `<div><i class="fas fa-ruler-combined mr-1"></i> ${product.floorArea} sqm</div>` : ''}
+                            ${product.lotArea ? `<div><i class="fas fa-vector-square mr-1"></i> ${product.lotArea} sqm</div>` : ''}
+                        </div>
+                    `;
+                } else if (product.mainCategory === "🚗 Vehicles") {
+                    categorySpecificInfo = `
+                        <div class="mt-2 grid grid-cols-2 gap-1 text-xs">
+                            ${product.vehicleBrand ? `<div><i class="fas fa-car mr-1"></i> ${product.vehicleBrand}</div>` : ''}
+                            ${product.vehicleYear ? `<div><i class="fas fa-calendar-alt mr-1"></i> ${product.vehicleYear}</div>` : ''}
+                            ${product.vehicleMileage ? `<div><i class="fas fa-tachometer-alt mr-1"></i> ${product.vehicleMileage} km</div>` : ''}
+                            ${product.vehicleFuelType ? `<div><i class="fas fa-gas-pump mr-1"></i> ${product.vehicleFuelType}</div>` : ''}
+                        </div>
+                    `;
+                }
+                
+                // Determine status badge class
+                let statusBadgeClass = "status-active";
+                if (product.status === "sold") statusBadgeClass = "status-sold";
+                if (product.status === "pending") statusBadgeClass = "status-pending";
+                
+                productCard.innerHTML = `
+                    <div class="relative">
+                        ${product.images.length > 0 ? 
+                            `<img class="w-full h-48 object-cover" src="${product.images[0]}" alt="${product.name}">` : 
+                            `<div class="w-full h-48 bg-gray-200 flex items-center justify-center text-gray-500">No Image</div>`}
+                        <div class="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-sm">
+                            ₱${product.price.toLocaleString()}
+                        </div>
+                        <div class="absolute top-2 right-2 ${statusBadgeClass} text-xs px-2 py-1 rounded">
+                            ${product.status.charAt(0).toUpperCase() + product.status.slice(1)}
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-semibold text-lg truncate">${product.name}</h3>
+                        <div class="flex items-center mt-2">
+                            <img class="h-6 w-6 rounded-full mr-2" src="${product.seller.avatar}" alt="${product.seller.name}">
+                            <span class="text-sm text-gray-600">${product.seller.name}</span>
+                            <span class="ml-auto text-sm text-gray-500">
+                                <i class="fas fa-star text-yellow-400"></i> ${product.seller.rating}
+                            </span>
+                        </div>
+                        <div class="mt-2">
+                            <span class="text-xs bg-gray-100 px-2 py-1 rounded">${product.mainCategory}</span>
+                            ${product.subCategory ? `<span class="text-xs bg-gray-100 px-2 py-1 rounded ml-1">${product.subCategory.split(' - ')[0]}</span>` : ''}
+                        </div>
+                        ${categorySpecificInfo}
+                        <div class="mt-3 flex justify-between text-xs text-gray-500">
+                            <div>
+                                <i class="fas fa-map-marker-alt mr-1"></i> ${product.location || 'Location not specified'}
+                            </div>
+                            <div>
+                                <i class="fas fa-eye mr-1"></i> ${product.views || 0}
+                                <i class="fas fa-heart ml-2 mr-1 text-red-500"></i> ${product.likes || 0}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(productCard);
+            });
+        }
+
+        // Filter and sort products
+        function filterProducts() {
+            const category = document.getElementById('categoryFilter').value;
+            const sortBy = document.getElementById('sortBy').value;
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            
+            let products = JSON.parse(localStorage.getItem('products')) || [];
+            
+            // Apply filters
+            if (category) {
+                products = products.filter(p => p.mainCategory === category);
+            }
+            
+            if (searchTerm) {
+                products = products.filter(p => 
+                    p.name.toLowerCase().includes(searchTerm) || 
+                    p.description.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            // Filter out inactive products
+            products = products.filter(p => p.status !== "inactive");
+            
+            // Apply sorting
+            switch (sortBy) {
+                case 'priceLow':
+                    products.sort((a, b) => a.price - b.price);
+                    break;
+                case 'priceHigh':
+                    products.sort((a, b) => b.price - a.price);
+                    break;
+                case 'newest':
+                default:
+                    products.sort((a, b) => new Date(b.datePosted) - new Date(a.datePosted));
+                    break;
+            }
+            
+            // Display filtered results
+            const container = document.getElementById('marketplaceItems');
+            container.innerHTML = '';
+            
+            if (products.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 col-span-full text-center py-12">No items match your search criteria.</p>';
+                return;
+            }
+            
+            products.forEach(product => {
+                const productCard = document.createElement('div');
+                productCard.className = 'bg-white rounded-lg shadow-md overflow-hidden product-card transition duration-300 cursor-pointer';
+                productCard.onclick = () => showProductDetail(product.id);
+                
+                let categorySpecificInfo = '';
+                if (product.mainCategory === "🏠 Real Estate") {
+                    categorySpecificInfo = `
+                        <div class="mt-2 grid grid-cols-2 gap-1 text-xs">
+                            ${product.bedrooms ? `<div><i class="fas fa-bed mr-1"></i> ${product.bedrooms} BR</div>` : ''}
+                            ${product.bathrooms ? `<div><i class="fas fa-bath mr-1"></i> ${product.bathrooms} BA</div>` : ''}
+                            ${product.floorArea ? `<div><i class="fas fa-ruler-combined mr-1"></i> ${product.floorArea} sqm</div>` : ''}
+                            ${product.lotArea ? `<div><i class="fas fa-vector-square mr-1"></i> ${product.lotArea} sqm</div>` : ''}
+                        </div>
+                    `;
+                } else if (product.mainCategory === "🚗 Vehicles") {
+                    categorySpecificInfo = `
+                        <div class="mt-2 grid grid-cols-2 gap-1 text-xs">
+                            ${product.vehicleBrand ? `<div><i class="fas fa-car mr-1"></i> ${product.vehicleBrand}</div>` : ''}
+                            ${product.vehicleYear ? `<div><i class="fas fa-calendar-alt mr-1"></i> ${product.vehicleYear}</div>` : ''}
+                            ${product.vehicleMileage ? `<div><i class="fas fa-tachometer-alt mr-1"></i> ${product.vehicleMileage} km</div>` : ''}
+                            ${product.vehicleFuelType ? `<div><i class="fas fa-gas-pump mr-1"></i> ${product.vehicleFuelType}</div>` : ''}
+                        </div>
+                    `;
+                }
+                
+                // Determine status badge class
+                let statusBadgeClass = "status-active";
+                if (product.status === "sold") statusBadgeClass = "status-sold";
+                if (product.status === "pending") statusBadgeClass = "status-pending";
+                
+                productCard.innerHTML = `
+                    <div class="relative">
+                        ${product.images.length > 0 ? 
+                            `<img class="w-full h-48 object-cover" src="${product.images[0]}" alt="${product.name}">` : 
+                            `<div class="w-full h-48 bg-gray-200 flex items-center justify-center text-gray-500">No Image</div>`}
+                        <div class="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-sm">
+                            ₱${product.price.toLocaleString()}
+                        </div>
+                        <div class="absolute top-2 right-2 ${statusBadgeClass} text-xs px-2 py-1 rounded">
+                            ${product.status.charAt(0).toUpperCase() + product.status.slice(1)}
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-semibold text-lg truncate">${product.name}</h3>
+                        <div class="flex items-center mt-2">
+                            <img class="h-6 w-6 rounded-full mr-2" src="${product.seller.avatar}" alt="${product.seller.name}">
+                            <span class="text-sm text-gray-600">${product.seller.name}</span>
+                            <span class="ml-auto text-sm text-gray-500">
+                                <i class="fas fa-star text-yellow-400"></i> ${product.seller.rating}
+                            </span>
+                        </div>
+                        <div class="mt-2">
+                            <span class="text-xs bg-gray-100 px-2 py-1 rounded">${product.mainCategory}</span>
+                            ${product.subCategory ? `<span class="text-xs bg-gray-100 px-2 py-1 rounded ml-1">${product.subCategory.split(' - ')[0]}</span>` : ''}
+                        </div>
+                        ${categorySpecificInfo}
+                        <div class="mt-3 flex justify-between text-xs text-gray-500">
+                            <div>
+                                <i class="fas fa-map-marker-alt mr-1"></i> ${product.location || 'Location not specified'}
+                            </div>
+                            <div>
+                                <i class="fas fa-eye mr-1"></i> ${product.views || 0}
+                                <i class="fas fa-heart ml-2 mr-1 text-red-500"></i> ${product.likes || 0}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(productCard);
+            });
+        }
+
+        // Show product detail modal
+        function showProductDetail(productId) {
+            const products = JSON.parse(localStorage.getItem('products')) || [];
+            const product = products.find(p => p.id === productId);
+            
+            if (!product) return;
+            
+            // Increment view count
+            product.views = (product.views || 0) + 1;
+            localStorage.setItem('products', JSON.stringify(products));
+            
+            // Set product details
+            document.getElementById('detailProductName').textContent = product.name;
+            document.getElementById('detailPrice').textContent = `₱${product.price.toLocaleString()}`;
+            document.getElementById('detailCategory').textContent = product.mainCategory + (product.subCategory ? ` › ${product.subCategory}` : '');
+            document.getElementById('detailDescription').textContent = product.description;
+            document.getElementById('detailContact').textContent = product.contactInfo;
+            document.getElementById('detailLocation').textContent = product.location || 'Location not specified';
+            document.getElementById('detailSellerName').textContent = product.seller.name;
+            document.getElementById('detailSellerAvatar').src = product.seller.avatar;
+            document.getElementById('detailMemberSince').textContent = product.seller.memberSince;
+            
+            // Set status badge
+            const statusBadge = document.getElementById('detailStatusBadge');
+            statusBadge.className = "status-badge";
+            if (product.status === "active") statusBadge.classList.add("status-active");
+            if (product.status === "sold") statusBadge.classList.add("status-sold");
+            if (product.status === "pending") statusBadge.classList.add("status-pending");
+            statusBadge.textContent = product.status.charAt(0).toUpperCase() + product.status.slice(1);
+            
+            // Set real estate details if applicable
+            const realEstateDetails = document.getElementById('realEstateDetails');
+            const vehicleDetails = document.getElementById('vehicleDetails');
+            
+            if (product.mainCategory === "🏠 Real Estate") {
+                realEstateDetails.classList.remove('hidden');
+                vehicleDetails.classList.add('hidden');
+                
+                document.getElementById('detailFloorArea').textContent = product.floorArea || '-';
+                document.getElementById('detailLotArea').textContent = product.lotArea || '-';
+                document.getElementById('detailBedrooms').textContent = product.bedrooms || '-';
+                document.getElementById('detailBathrooms').textContent = product.bathrooms || '-';
+                document.getElementById('detailYearBuilt').textContent = product.yearBuilt || '-';
+                document.getElementById('detailParkingSpaces').textContent = product.parkingSpaces || '-';
+                
+                // Initialize property map
+                const propertyMap = L.map('detailPropertyMap');
+                if (product.coordinates) {
+                    propertyMap.setView([product.coordinates.lat, product.coordinates.lng], 15);
+                    
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    }).addTo(propertyMap);
+                    
+                    L.marker([product.coordinates.lat, product.coordinates.lng]).addTo(propertyMap)
+                        .bindPopup(product.location || 'Property Location')
+                        .openPopup();
+                } else {
+                    propertyMap.setView([14.5995, 120.9842], 13); // Default to Manila
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    }).addTo(propertyMap);
+                }
+            } else if (product.mainCategory === "🚗 Vehicles") {
+                realEstateDetails.classList.add('hidden');
+                vehicleDetails.classList.remove('hidden');
+                
+                document.getElementById('detailVehicleBrand').textContent = product.vehicleBrand || '-';
+                document.getElementById('detailVehicleModel').textContent = product.vehicleModel || '-';
+                document.getElementById('detailVehicleYear').textContent = product.vehicleYear || '-';
+                document.getElementById('detailVehicleMileage').textContent = product.vehicleMileage || '-';
+                document.getElementById('detailVehicleFuelType').textContent = product.vehicleFuelType || '-';
+                document.getElementById('detailVehicleTransmission').textContent = product.vehicleTransmission || '-';
+                document.getElementById('detailVehicleColor').textContent = product.vehicleColor || '-';
+                document.getElementById('detailVehicleSeats').textContent = product.vehicleSeats || '-';
+            } else {
+                realEstateDetails.classList.add('hidden');
+                vehicleDetails.classList.add('hidden');
+            }
+            
+            // Set product images
+            const gallery = document.getElementById('productImageGallery');
+            const thumbnails = document.getElementById('productThumbnails');
+            gallery.innerHTML = '';
+            thumbnails.innerHTML = '';
+            
+            if (product.images.length > 0) {
+                // Main image
+                const mainImg = document.createElement('img');
+                mainImg.src = product.images[0];
+                mainImg.className = 'w-full h-64 object-cover';
+                mainImg.alt = product.name;
+                gallery.appendChild(mainImg);
+                
+                // Thumbnails
+                product.images.forEach((img, index) => {
+                    const thumbContainer = document.createElement('div');
+                    thumbContainer.className = 'cursor-pointer';
+                    thumbContainer.onclick = () => {
+                        mainImg.src = img;
+                    };
+                    
+                    const thumbImg = document.createElement('img');
+                    thumbImg.src = img;
+                    thumbImg.className = 'w-full h-16 object-cover';
+                    thumbImg.alt = `${product.name} thumbnail ${index + 1}`;
+                    
+                    thumbContainer.appendChild(thumbImg);
+                    thumbnails.appendChild(thumbContainer);
+                });
+            } else {
+                gallery.innerHTML = '<div class="w-full h-64 bg-gray-200 flex items-center justify-center text-gray-500">No Images Available</div>';
+            }
+            
+            // Show admin controls if current user is admin
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            if (currentUser && currentUser.role === "admin") {
+                document.getElementById('adminControls').classList.remove('hidden');
+            } else {
+                document.getElementById('adminControls').classList.add('hidden');
+            }
+            
+            // Show modal
+            document.getElementById('productDetailModal').classList.remove('hidden');
+        }
+
+        // Show admin dashboard
+        function showAdminDashboard() {
+            const users = JSON.parse(localStorage.getItem('users')) || [];
+            const products = JSON.parse(localStorage.getItem('products')) || [];
+            const activities = JSON.parse(localStorage.getItem('activities')) || [];
+            
+            // Update stats
+            document.getElementById('totalUsersCount').textContent = users.length;
+            document.getElementById('activeListingsCount').textContent = products.filter(p => p.status === "active").length;
+            document.getElementById('marketplaceActivity').textContent = activities.length;
+            
+            // Load recent user activities
+            const activitiesTable = document.getElementById('userActivitiesTable');
+            activitiesTable.innerHTML = '';
+            
+            const recentActivities = activities.slice(0, 5); // Show only 5 most recent
+            recentActivities.forEach(activity => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0 h-10 w-10">
+                                <img class="h-10 w-10 rounded-full" src="${activity.userAvatar}" alt="${activity.userName}">
+                            </div>
+                            <div class="ml-4">
+                                <div class="text-sm font-medium text-gray-900">${activity.userName}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-900">${activity.activity}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-500">${new Date(activity.timestamp).toLocaleString()}</div>
+                    </td>
+                `;
+                activitiesTable.appendChild(row);
+            });
+            
+            // Load user management table
+            const userManagementTable = document.getElementById('userManagementTable');
+            userManagementTable.innerHTML = '';
+            
+            users.forEach(user => {
+                const row = document.createElement('tr');
+                
+                // Determine status badge class
+                let statusBadgeClass = "status-active";
+                if (user.status === "inactive") statusBadgeClass = "status-inactive";
+                
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0 h-10 w-10">
+                                <img class="h-10 w-10 rounded-full" src="${user.avatar}" alt="${user.name}">
+                            </div>
+                            <div class="ml-4">
+                                <div class="text-sm font-medium text-gray-900">${user.name}</div>
+                                <div class="text-sm text-gray-500">${user.email}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusBadgeClass}">
+                            ${user.status.charAt(0).toUpperCase() + user.status.slice(1)}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <button class="text-indigo-600 hover:text-indigo-900 mr-3" onclick="toggleUserStatus('${user.id}')">
+                            ${user.status === "active" ? "Disable" : "Enable"}
+                        </button>
+                        <button class="text-red-600 hover:text-red-900" onclick="deleteUser('${user.id}')">
+                            Delete
+                        </button>
+                    </td>
+                `;
+                userManagementTable.appendChild(row);
+            });
+            
+            // Load recent listings
+            const recentListingsTable = document.getElementById('recentListingsTable');
+            recentListingsTable.innerHTML = '';
+            
+            const recentListings = products.slice(0, 5); // Show only 5 most recent
+            recentListings.forEach(product => {
+                // Find seller info
+                const seller = users.find(u => u.id === product.seller.id) || product.seller;
+                
+                // Determine status badge class
+                let statusBadgeClass = "status-active";
+                if (product.status === "sold") statusBadgeClass = "status-sold";
+                if (product.status === "pending") statusBadgeClass = "status-pending";
+                if (product.status === "inactive") statusBadgeClass = "status-inactive";
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0 h-10 w-10">
+                                ${product.images.length > 0 ? 
+                                    `<img class="h-10 w-10 rounded-full object-cover" src="${product.images[0]}" alt="${product.name}">` : 
+                                    `<div class="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 text-xs">No Image</div>`}
+                            </div>
+                            <div class="ml-4">
+                                <div class="text-sm font-medium text-gray-900">${product.name}</div>
+                                <div class="text-sm text-gray-500">${product.mainCategory}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-900">${seller.name}</div>
+                        <div class="text-sm text-gray-500">${seller.email}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-900">₱${product.price.toLocaleString()}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusBadgeClass}">
+                            ${product.status.charAt(0).toUpperCase() + product.status.slice(1)}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <button class="text-indigo-600 hover:text-indigo-900 mr-3" onclick="viewListing('${product.id}')">
+                            View
+                        </button>
+                        <button class="text-red-600 hover:text-red-900" onclick="deleteListing('${product.id}')">
+                            Delete
+                        </button>
+                    </td>
+                `;
+                recentListingsTable.appendChild(row);
+            });
+            
+            // Show modal
+            document.getElementById('adminDashboardModal').classList.remove('hidden');
+        }
+
+        // Filter users in admin dashboard
+        function filterUsersInAdminDashboard() {
+            const searchTerm = document.getElementById('userSearchInput').value.toLowerCase();
+            const users = JSON.parse(localStorage.getItem('users')) || [];
+            const userManagementTable = document.getElementById('userManagementTable');
+            
+            userManagementTable.innerHTML = '';
+            
+            const filteredUsers = searchTerm ? 
+                users.filter(user => 
+                    user.name.toLowerCase().includes(searchTerm) || 
+                    user.email.toLowerCase().includes(searchTerm)
+                ) : 
+                users;
+            
+            filteredUsers.forEach(user => {
+                const row = document.createElement('tr');
+                
+                // Determine status badge class
+                let statusBadgeClass = "status-active";
+                if (user.status === "inactive") statusBadgeClass = "status-inactive";
+                
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0 h-10 w-10">
+                                <img class="h-10 w-10 rounded-full" src="${user.avatar}" alt="${user.name}">
+                            </div>
+                            <div class="ml-4">
+                                <div class="text-sm font-medium text-gray-900">${user.name}</div>
+                                <div class="text-sm text-gray-500">${user.email}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusBadgeClass}">
+                            ${user.status.charAt(0).toUpperCase() + user.status.slice(1)}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <button class="text-indigo-600 hover:text-indigo-900 mr-3" onclick="toggleUserStatus('${user.id}')">
+                            ${user.status === "active" ? "Disable" : "Enable"}
+                        </button>
+                        <button class="text-red-600 hover:text-red-900" onclick="deleteUser('${user.id}')">
+                            Delete
+                        </button>
+                    </td>
+                `;
+                userManagementTable.appendChild(row);
+            });
+        }
+
+        // Toggle user status (enable/disable)
+        function toggleUserStatus(userId) {
+            const users = JSON.parse(localStorage.getItem('users')) || [];
+            const userIndex = users.findIndex(u => u.id === userId);
+            
+            if (userIndex !== -1) {
+                users[userIndex].status = users[userIndex].status === "active" ? "inactive" : "active";
+                localStorage.setItem('users', JSON.stringify(users));
+                
+                // Update current user if it's the same user
+                const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+                if (currentUser && currentUser.id === userId) {
+                    currentUser.status = users[userIndex].status;
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    
+                    if (currentUser.status === "inactive") {
+                        alert('Your account has been disabled by admin.');
+                        handleLogout();
+                        return;
+                    }
+                }
+                
+                // Refresh admin dashboard
+                showAdminDashboard();
+            }
+        }
+
+        // Delete user
+        function deleteUser(userId) {
+            if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) return;
+            
+            const users = JSON.parse(localStorage.getItem('users')) || [];
+            const updatedUsers = users.filter(u => u.id !== userId);
+            localStorage.setItem('users', JSON.stringify(updatedUsers));
+            
+            // Update current user if it's the same user
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            if (currentUser && currentUser.id === userId) {
+                localStorage.removeItem('currentUser');
+                handleLogout();
+                return;
+            }
+            
+            // Refresh admin dashboard
+            showAdminDashboard();
+        }
+
+        // View listing in admin dashboard
+        function viewListing(productId) {
+            document.getElementById('adminDashboardModal').classList.add('hidden');
+            showProductDetail(productId);
+        }
+
+        // Delete listing from admin dashboard
+        function deleteListing(productId) {
+            if (!confirm('Are you sure you want to delete this listing? This action cannot be undone.')) return;
+            
+            const products = JSON.parse(localStorage.getItem('products')) || [];
+            const updatedProducts = products.filter(p => p.id !== productId);
+            localStorage.setItem('products', JSON.stringify(updatedProducts));
+            
+            // Refresh admin dashboard
+            showAdminDashboard();
+            
+            // Refresh marketplace if on that page
+            if (!document.getElementById('adminDashboardModal').classList.contains('hidden')) {
+                displayMarketplaceItems();
+            }
+        }
+
+        // Delete current post from product detail modal
+        function deleteCurrentPost() {
+            const productId = parseInt(document.querySelector('#productDetailModal').getAttribute('data-product-id'));
+            if (!productId) return;
+            
+            if (!confirm('Are you sure you want to delete this post? This action cannot be undone.')) return;
+            
+            const products = JSON.parse(localStorage.getItem('products')) || [];
+            const updatedProducts = products.filter(p => p.id !== productId);
+            localStorage.setItem('products', JSON.stringify(updatedProducts));
+            
+            // Close modal
+            document.getElementById('productDetailModal').classList.add('hidden');
+            
+            // Refresh marketplace
+            displayMarketplaceItems();
+        }
+
+        // Disable current user from product detail modal
+        function disableCurrentUser() {
+            const productId = parseInt(document.querySelector('#productDetailModal').getAttribute('data-product-id'));
+            if (!productId) return;
+            
+            const products = JSON.parse(localStorage.getItem('products')) || [];
+            const product = products.find(p => p.id === productId);
+            if (!product) return;
+            
+            const userId = product.seller.id;
+            const users = JSON.parse(localStorage.getItem('users')) || [];
+            const userIndex = users.findIndex(u => u.id === userId);
+            
+            if (userIndex !== -1) {
+                users[userIndex].status = "inactive";
+                localStorage.setItem('users', JSON.stringify(users));
+                
+                // Add to activities
+                const activities = JSON.parse(localStorage.getItem('activities')) || [];
+                const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+                
+                activities.unshift({
+                    userId: currentUser.id,
+                    userName: currentUser.name,
+                    userAvatar: currentUser.avatar,
+                    activity: `Disabled user: ${users[userIndex].name}`,
+                    timestamp: new Date().toISOString()
+                });
+                
+                localStorage.setItem('activities', JSON.stringify(activities));
+                
+                // Close modal
+                document.getElementById('productDetailModal').classList.add('hidden');
+                
+                // Refresh marketplace
+                displayMarketplaceItems();
+                
+                alert(`User ${users[userIndex].name} has been disabled.`);
+            }
+        }
+
+        // Show user profile modal
+        function showUserProfile() {
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            if (!currentUser) return;
+            
+            // Set profile data
+            document.getElementById('profileAvatar').src = currentUser.avatar;
+            document.getElementById('profileName').textContent = currentUser.name;
+            document.getElementById('profileEmail').textContent = currentUser.email;
+            document.getElementById('profileFullName').value = currentUser.name;
+            document.getElementById('profilePhone').value = currentUser.phone || '';
+            document.getElementById('profileFacebook').value = currentUser.facebookUrl || '';
+            document.getElementById('profileLocation').value = currentUser.location || '';
+            
+            // Show modal
+            document.getElementById('userProfileModal').classList.remove('hidden');
+        }
+
+        // Show user's listings
+        function showMyListings() {
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            if (!currentUser) return;
+            
+            const products = JSON.parse(localStorage.getItem('products')) || [];
+            const myProducts = products.filter(p => p.seller.id === currentUser.id);
+            
+            const myListingsTable = document.getElementById('myListingsTable');
+            myListingsTable.innerHTML = '';
+            
+            if (myProducts.length === 0) {
+                document.getElementById('noListingsMessage').classList.remove('hidden');
+            } else {
+                document.getElementById('noListingsMessage').classList.add('hidden');
+                
+                myProducts.forEach(product => {
+                    // Determine status badge class
+                    let statusBadgeClass = "status-active";
+                    if (product.status === "sold") statusBadgeClass = "status-sold";
+                    if (product.status === "pending") statusBadgeClass = "status-pending";
+                    
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0 h-10 w-10">
+                                    ${product.images.length > 0 ? 
+                                        `<img class="h-10 w-10 rounded-full object-cover" src="${product.images[0]}" alt="${product.name}">` : 
+                                        `<div class="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 text-xs">No Image</div>`}
+                                </div>
+                                <div class="ml-4">
+                                    <div class="text-sm font-medium text-gray-900">${product.name}</div>
+                                    <div class="text-sm text-gray-500">${product.mainCategory}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">₱${product.price.toLocaleString()}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusBadgeClass}">
+                                ${product.status.charAt(0).toUpperCase() + product.status.slice(1)}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">${product.views || 0}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-500">${product.datePosted}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <button class="text-indigo-600 hover:text-indigo-900 mr-3" onclick="editListing('${product.id}')">
+                                Edit
+                            </button>
+                            <button class="text-red-600 hover:text-red-900" onclick="deleteMyListing('${product.id}')">
+                                Delete
+                            </button>
+                        </td>
+                    `;
+                    myListingsTable.appendChild(row);
+                });
+            }
+            
+            // Show modal
+            document.getElementById('myListingsModal').classList.remove('hidden');
+        }
+
+        // Filter user's listings by status
+        function filterMyListings(status) {
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            if (!currentUser) return;
+            
+            const products = JSON.parse(localStorage.getItem('products')) || [];
+            let myProducts = products.filter(p => p.seller.id === currentUser.id);
+            
+            if (status !== 'all') {
+                myProducts = myProducts.filter(p => p.status === status);
+            }
+            
+            const myListingsTable = document.getElementById('myListingsTable');
+            myListingsTable.innerHTML = '';
+            
+            if (myProducts.length === 0) {
+                document.getElementById('noListingsMessage').classList.remove('hidden');
+            } else {
+                document.getElementById('noListingsMessage').classList.add('hidden');
+                
+                myProducts.forEach(product => {
+                    // Determine status badge class
+                    let statusBadgeClass = "status-active";
+                    if (product.status === "sold") statusBadgeClass = "status-sold";
+                    if (product.status === "pending") statusBadgeClass = "status-pending";
+                    
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0 h-10 w-10">
+                                    ${product.images.length > 0 ? 
+                                        `<img class="h-10 w-10 rounded-full object-cover" src="${product.images[0]}" alt="${product.name}">` : 
+                                        `<div class="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 text-xs">No Image</div>`}
+                                </div>
+                                <div class="ml-4">
+                                    <div class="text-sm font-medium text-gray-900">${product.name}</div>
+                                    <div class="text-sm text-gray-500">${product.mainCategory}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">₱${product.price.toLocaleString()}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusBadgeClass}">
+                                ${product.status.charAt(0).toUpperCase() + product.status.slice(1)}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">${product.views || 0}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-500">${product.datePosted}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <button class="text-indigo-600 hover:text-indigo-900 mr-3" onclick="editListing('${product.id}')">
+                                Edit
+                            </button>
+                            <button class="text-red-600 hover:text-red-900" onclick="deleteMyListing('${product.id}')">
+                                Delete
+                            </button>
+                        </td>
+                    `;
+                    myListingsTable.appendChild(row);
+                });
+            }
+        }
+
+        // Edit user's listing
+        function editListing(productId) {
+            const products = JSON.parse(localStorage.getItem('products')) || [];
+            const product = products.find(p => p.id === parseInt(productId));
+            if (!product) return;
+            
+            // Close my listings modal
+            document.getElementById('myListingsModal').classList.add('hidden');
+            
+            // Open sell item modal with product data
+            document.getElementById('sellItemModal').classList.remove('hidden');
+            
+            // Fill form with product data
+            document.getElementById('productName').value = product.name;
+            document.getElementById('productPrice').value = product.price;
+            document.getElementById('mainCategory').value = product.mainCategory;
+            updateSubcategories();
+            document.getElementById('subCategory').value = product.subCategory;
+            document.getElementById('productDescription').value = product.description;
+            document.getElementById('contactInfo').value = product.contactInfo;
+            document.getElementById('location').value = product.location;
+            
+            // Show category-specific fields if applicable
+            toggleCategorySpecificFields();
+            
+            // Fill real estate fields if applicable
+            if (product.mainCategory === "🏠 Real Estate") {
+                document.getElementById('floorArea').value = product.floorArea || '';
+                document.getElementById('lotArea').value = product.lotArea || '';
+                document.getElementById('bedrooms').value = product.bedrooms || '';
+                document.getElementById('bathrooms').value = product.bathrooms || '';
+                document.getElementById('yearBuilt').value = product.yearBuilt || '';
+                document.getElementById('parkingSpaces').value = product.parkingSpaces || '';
+            }
+            
+            // Fill vehicle fields if applicable
+            if (product.mainCategory === "🚗 Vehicles") {
+                document.getElementById('vehicleBrand').value = product.vehicleBrand || '';
+                document.getElementById('vehicleModel').value = product.vehicleModel || '';
+                document.getElementById('vehicleYear').value = product.vehicleYear || '';
+                document.getElementById('vehicleMileage').value = product.vehicleMileage || '';
+                document.getElementById('vehicleFuelType').value = product.vehicleFuelType || '';
+                document.getElementById('vehicleTransmission').value = product.vehicleTransmission || '';
+                document.getElementById('vehicleColor').value = product.vehicleColor || '';
+                document.getElementById('vehicleSeats').value = product.vehicleSeats || '';
+            }
+            
+            // Show existing images
+            const previewContainer = document.getElementById('imagePreviewContainer');
+            previewContainer.innerHTML = '';
+            
+            product.images.forEach((img, index) => {
+                const previewDiv = document.createElement('div');
+                previewDiv.style.position = 'relative';
+                previewDiv.style.display = 'inline-block';
+                
+                const imgElement = document.createElement('img');
+                imgElement.src = img;
+                imgElement.classList.add('preview-image');
+                
+                const removeBtn = document.createElement('span');
+                removeBtn.classList.add('remove-image');
+                removeBtn.innerHTML = '&times;';
+                removeBtn.onclick = function() {
+                    previewDiv.remove();
+                    // In a real implementation, you would track which images to remove
+                };
+                
+                previewDiv.appendChild(imgElement);
+                previewDiv.appendChild(removeBtn);
+                previewContainer.appendChild(previewDiv);
+            });
+            
+            // Modify form to handle update instead of create
+            const form = document.getElementById('productForm');
+            form.onsubmit = function(e) {
+                e.preventDefault();
+                updateProduct(productId);
+            };
+            
+            // Change submit button text
+            const submitBtn = form.querySelector('button[type="submit"]');
+            submitBtn.textContent = 'Update Item';
+        }
+
+        // Update product
+        function updateProduct(productId) {
+            // Get form values
+            const productName = document.getElementById('productName').value;
+            const productPrice = document.getElementById('productPrice').value;
+            const mainCategory = document.getElementById('mainCategory').value;
+            const subCategory = document.getElementById('subCategory').value;
+            const description = document.getElementById('productDescription').value;
+            const contactInfo = document.getElementById('contactInfo').value;
+            const location = document.getElementById('location').value;
+            const images = document.getElementById('productImages').files;
+            
+            // Validate required fields
+            if (!productName || !productPrice || !mainCategory || !description || !contactInfo) {
+                alert('Please fill in all required fields');
+                return;
+            }
+            
+            // Get products from localStorage
+            const products = JSON.parse(localStorage.getItem('products')) || [];
+            const productIndex = products.findIndex(p => p.id === parseInt(productId));
+            
+            if (productIndex === -1) return;
+            
+            // Update product
+            products[productIndex].name = productName;
+            products[productIndex].price = parseInt(productPrice);
+            products[productIndex].mainCategory = mainCategory;
+            products[productIndex].subCategory = subCategory;
+            products[productIndex].description = description;
+            products[productIndex].contactInfo = contactInfo;
+            products[productIndex].location = location;
+            
+            // Update real estate specific fields if applicable
+            if (mainCategory === "🏠 Real Estate") {
+                products[productIndex].floorArea = document.getElementById('floorArea').value;
+                products[productIndex].lotArea = document.getElementById('lotArea').value;
+                products[productIndex].bedrooms = document.getElementById('bedrooms').value;
+                products[productIndex].bathrooms = document.getElementById('bathrooms').value;
+                products[productIndex].yearBuilt = document.getElementById('yearBuilt').value;
+                products[productIndex].parkingSpaces = document.getElementById('parkingSpaces').value;
+            }
+            
+            // Update vehicle specific fields if applicable
+            if (mainCategory === "🚗 Vehicles") {
+                products[productIndex].vehicleBrand = document.getElementById('vehicleBrand').value;
+                products[productIndex].vehicleModel = document.getElementById('vehicleModel').value;
+                products[productIndex].vehicleYear = document.getElementById('vehicleYear').value;
+                products[productIndex].vehicleMileage = document.getElementById('vehicleMileage').value;
+                products[productIndex].vehicleFuelType = document.getElementById('vehicleFuelType').value;
+                products[productIndex].vehicleTransmission = document.getElementById('vehicleTransmission').value;
+                products[productIndex].vehicleColor = document.getElementById('vehicleColor').value;
+                products[productIndex].vehicleSeats = document.getElementById('vehicleSeats').value;
+            }
+            
+            // Handle new images if any
+            if (images.length > 0) {
+                // In a real implementation, you would upload new images and update the product
+                alert('In a real implementation, new images would be uploaded here');
+            }
+            
+            // Save updated products
+            localStorage.setItem('products', JSON.stringify(products));
+            
+            // Reset form
+            document.getElementById('productForm').reset();
+            document.getElementById('imagePreviewContainer').innerHTML = '';
+            document.getElementById('sellItemModal').classList.add('hidden');
+            document.getElementById('realEstateFields').classList.add('hidden');
+            document.getElementById('vehicleFields').classList.add('hidden');
+            
+            // Refresh marketplace display
+            displayMarketplaceItems();
+            
+            // Refresh my listings if open
+            if (!document.getElementById('myListingsModal').classList.contains('hidden')) {
+                showMyListings();
+            }
+            
+            alert('Your item has been updated successfully!');
+        }
+
+        // Delete user's listing
+        function deleteMyListing(productId) {
+            if (!confirm('Are you sure you want to delete this listing? This action cannot be undone.')) return;
+            
+            const products = JSON.parse(localStorage.getItem('products')) || [];
+            const updatedProducts = products.filter(p => p.id !== parseInt(productId));
+            localStorage.setItem('products', JSON.stringify(updatedProducts));
+            
+            // Refresh my listings
+            showMyListings();
+            
+            // Refresh marketplace if on that page
+            if (!document.getElementById('myListingsModal').classList.contains('hidden')) {
+                displayMarketplaceItems();
+            }
+        }
+    </script>
+</body>
+</html>
