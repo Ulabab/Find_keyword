@@ -1,4 +1,4 @@
-</html><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -464,6 +464,16 @@
             animation: spin 1s ease-in-out;
         }
 
+        .waiting-message {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            margin: 30px auto;
+            max-width: 600px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
         @keyframes giftFound {
             0%, 100% { transform: scale(1); }
             50% { transform: scale(1.05); }
@@ -483,6 +493,11 @@
         @keyframes spin {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
+        }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
         }
 
         /* Responsive adjustments for the grid */
@@ -711,14 +726,16 @@
                 currentSession: Date.now(),
                 gameStarted: false,
                 gameStartTime: null,
-                gameEndTime: null
+                gameEndTime: null,
+                lastUpdate: Date.now()
             };
         }
 
         function saveGlobalGameState(state) {
+            state.lastUpdate = Date.now();
             localStorage.setItem('globalGameState', JSON.stringify(state));
-            // Trigger storage event for other tabs
-            window.dispatchEvent(new Event('storage'));
+            // Trigger storage event for other tabs with a unique value to ensure it fires
+            localStorage.setItem('gameStateUpdateTrigger', Math.random().toString());
         }
 
         function resetGlobalGameState() {
@@ -727,7 +744,8 @@
                 currentSession: Date.now(),
                 gameStarted: false,
                 gameStartTime: null,
-                gameEndTime: null
+                gameEndTime: null,
+                lastUpdate: Date.now()
             };
             saveGlobalGameState(state);
         }
@@ -761,7 +779,7 @@
 
         // Admin credentials
         const ADMIN_USERNAME = "admin";
-        const ADMIN_PASSWORD = "admin123";
+        const ADMIN_PASSWORD = "Y@MY@M143";
 
         // Authentication Functions
         function getUsers() {
@@ -893,7 +911,7 @@
 
                 showSuccess('Login successful! Welcome back!');
                 setTimeout(() => {
-                    startGame(username);
+                    startGameSession(username);
                 }, 1000);
             } else {
                 // Register
@@ -926,7 +944,7 @@
                 saveUsers(users);
                 showSuccess('Registration successful! Welcome to the game!');
                 setTimeout(() => {
-                    startGame(username);
+                    startGameSession(username);
                 }, 1000);
             }
         }
@@ -974,7 +992,7 @@
                 </div>
             `;
 
-            // Load prize editors (rest of the function remains the same)
+            // Load prize editors
             const prizes = getPrizes();
             const prizeGrid = document.getElementById('prizeGrid');
             prizeGrid.innerHTML = '';
@@ -1003,6 +1021,13 @@
                 globalState.gameStarted = true;
                 globalState.gameStartTime = Date.now();
                 globalState.gameEndTime = null;
+                
+                // Reset found words if starting a new game
+                if (globalState.currentSession !== Date.now()) {
+                    globalState.foundWords = {};
+                    globalState.currentSession = Date.now();
+                }
+                
                 saveGlobalGameState(globalState);
                 loadAdminData();
                 alert('Game started! All players will see the timer begin now.');
@@ -1017,6 +1042,16 @@
                 saveGlobalGameState(globalState);
                 loadAdminData();
                 alert('Game stopped! All players will see the timer pause.');
+            }
+        }
+
+        function resetGameState() {
+            if (confirm('Reset all found words? This will allow players to find them again but keep the game running.')) {
+                const globalState = getGlobalGameState();
+                globalState.foundWords = {};
+                saveGlobalGameState(globalState);
+                loadAdminData();
+                alert('Game state reset! All words can now be found again.');
             }
         }
 
@@ -1133,79 +1168,6 @@
             }
         }
 
-        function handleAuth() {
-            const username = document.getElementById('username').value.trim();
-            const password = document.getElementById('password').value.trim();
-
-            if (!username || !password) {
-                showError('Please enter both username and password!');
-                return;
-            }
-
-            if (username.length < 3) {
-                showError('Username must be at least 3 characters long!');
-                return;
-            }
-
-            if (password.length < 4) {
-                showError('Password must be at least 4 characters long!');
-                return;
-            }
-
-            const users = getUsers();
-
-            if (isLoginMode) {
-                // Login
-                if (!users[username]) {
-                    showError('Username not found! Please register first.');
-                    return;
-                }
-
-                if (users[username].password !== password) {
-                    showError('Incorrect password!');
-                    return;
-                }
-
-                showSuccess('Login successful! Welcome back!');
-                setTimeout(() => {
-                    startGameSession(username);
-                }, 1000);
-            } else {
-                // Register
-                const gcashName = document.getElementById('gcashName').value.trim();
-                const gcashNumber = document.getElementById('gcashNumber').value.trim();
-
-                if (!gcashName || !gcashNumber) {
-                    showError('Please fill in all GCash details!');
-                    return;
-                }
-
-                if (gcashNumber.length !== 11 || !gcashNumber.startsWith('09')) {
-                    showError('GCash number must be 11 digits starting with 09!');
-                    return;
-                }
-
-                if (users[username]) {
-                    showError('Username already exists! Please choose a different one.');
-                    return;
-                }
-
-                users[username] = {
-                    password: password,
-                    gcashName: gcashName,
-                    gcashNumber: gcashNumber,
-                    created: new Date().toISOString(),
-                    gamesPlayed: 0
-                };
-
-                saveUsers(users);
-                showSuccess('Registration successful! Welcome to the game!');
-                setTimeout(() => {
-                    startGameSession(username);
-                }, 1000);
-            }
-        }
-
         function startGameSession(username) {
             currentUser = username;
             setCurrentUser(username); // Persist login
@@ -1285,17 +1247,87 @@
             // Update found keywords list based on global state
             foundKeywords = [];
             Object.keys(globalState.foundWords).forEach(wordIndex => {
-                if (gameData[wordIndex]) {
-                    foundKeywords.push(gameData[wordIndex].word);
+                const numericIndex = parseInt(wordIndex);
+                if (gameData[numericIndex]) {
+                    foundKeywords.push(gameData[numericIndex].word);
                 }
             });
 
-            startTime = globalState.gameStartTime || Date.now();
+            startTime = globalState.gameStartTime;
             startTimer();
             generateGrid();
             renderGifts();
             updateScoreboard();
-            syncWithGlobalState(); // Load any words already found by others
+            synchronizeGameState(); // Load any words already found by others
+        }
+
+        function synchronizeGameState() {
+            if (!currentUser || document.getElementById('gameContainer').style.display === 'none') {
+                return;
+            }
+
+            const globalState = getGlobalGameState();
+            let hasChanges = false;
+
+            // Check if game start/stop status changed
+            const gameStatusChanged = (
+                (globalState.gameStarted && !startTime) || 
+                (!globalState.gameStarted && startTime)
+            );
+
+            if (gameStatusChanged) {
+                if (globalState.gameStarted) {
+                    // Game was started by admin
+                    startTime = globalState.gameStartTime;
+                    hideWaitingMessage();
+                    startTimer();
+                    hasChanges = true;
+                } else {
+                    // Game was stopped by admin
+                    if (timerInterval) {
+                        clearInterval(timerInterval);
+                        timerInterval = null;
+                    }
+                    showWaitingMessage();
+                    hasChanges = true;
+                }
+            }
+
+            // Check for newly found words
+            Object.entries(globalState.foundWords).forEach(([wordIndex, wordData]) => {
+                const numericIndex = parseInt(wordIndex);
+                if (gameData[numericIndex] && !gameData[numericIndex].found) {
+                    gameData[numericIndex].found = true;
+                    gameData[numericIndex].winner = wordData.winner;
+                    gameData[numericIndex].foundAt = wordData.foundAt;
+                    hasChanges = true;
+
+                    if (!foundKeywords.includes(gameData[numericIndex].word)) {
+                        foundKeywords.push(gameData[numericIndex].word);
+                    }
+
+                    // Mark word in grid
+                    if (wordData.positions) {
+                        wordData.positions.forEach(pos => {
+                            if (gridCells[pos.row] && gridCells[pos.row][pos.col]) {
+                                gridCells[pos.row][pos.col].classList.add('found');
+                            }
+                        });
+                    }
+
+                    // Show notification if it wasn't found by current user
+                    if (wordData.winner !== currentUser) {
+                        setTimeout(() => {
+                            showSuccessModal(`🎉 "${gameData[numericIndex].word}" was found by <strong>${wordData.winner}</strong>!<br><br>The word has been marked in the grid.`);
+                        }, 100);
+                    }
+                }
+            });
+
+            if (hasChanges) {
+                renderGifts();
+                updateScoreboard();
+            }
         }
 
         function showWaitingMessage() {
@@ -1304,6 +1336,12 @@
                 const waitingDiv = document.createElement('div');
                 waitingDiv.id = 'waitingMessage';
                 waitingDiv.className = 'waiting-message';
+                
+                let adminButton = '';
+                if (isAdmin) {
+                    adminButton = `<button onclick="startGame()" style="margin-top: 20px; padding: 12px 24px; background: #28a745; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1em;">🚀 START GAME AS ADMIN</button>`;
+                }
+                
                 waitingDiv.innerHTML = `
                     <h2>⏳ Waiting for Game to Start</h2>
                     <p>The admin hasn't started the game yet. Please wait...</p>
@@ -1312,19 +1350,10 @@
                         <div style="display: inline-block; width: 20px; height: 20px; background: #fff; border-radius: 50%; animation: bounce 1.4s ease-in-out 0.16s infinite both; margin-left: 10px;"></div>
                         <div style="display: inline-block; width: 20px; height: 20px; background: #fff; border-radius: 50%; animation: bounce 1.4s ease-in-out 0.32s infinite both; margin-left: 10px;"></div>
                     </div>
+                    ${adminButton}
                 `;
                 mainContent.style.display = 'none';
                 mainContent.parentNode.insertBefore(waitingDiv, mainContent);
-                
-                // Add bounce animation
-                const style = document.createElement('style');
-                style.textContent = `
-                    @keyframes bounce {
-                        0%, 80%, 100% { transform: scale(0); }
-                        40% { transform: scale(1); }
-                    }
-                `;
-                document.head.appendChild(style);
             }
         }
 
@@ -1334,21 +1363,6 @@
                 waitingMessage.remove();
             }
             document.querySelector('.main-content').style.display = 'grid';
-        }
-
-        function syncWithGlobalState() {
-            const globalState = getGlobalGameState();
-            
-            // Mark found words in the grid
-            Object.entries(globalState.foundWords).forEach(([wordIndex, wordData]) => {
-                if (wordData.positions && gameData[wordIndex]) {
-                    wordData.positions.forEach(pos => {
-                        if (gridCells[pos.row] && gridCells[pos.row][pos.col]) {
-                            gridCells[pos.row][pos.col].classList.add('found');
-                        }
-                    });
-                }
-            });
         }
 
         function startTimer() {
@@ -1363,7 +1377,7 @@
                 
                 if (!currentGlobalState.gameStarted) {
                     // Game hasn't started yet or was stopped
-                    document.getElementById('timer').textContent = 'Waiting for admin to start game...';
+                    document.getElementById('timer').textContent = 'Waiting...';
                     document.getElementById('timer').style.color = '#e74c3c';
                     return;
                 } else {
@@ -1650,30 +1664,30 @@
             if (matchingKeyword) {
                 // Get the word positions for global sync
                 const wordPositions = getWordPositions(matchingKeyword.word);
+                const wordIndex = gameData.findIndex(item => item.word === matchingKeyword.word);
                 
-                // Update local state
+                // Update local state immediately for responsiveness
                 markSelectionAsFound(matchingKeyword.word);
                 matchingKeyword.found = true;
                 matchingKeyword.winner = currentUser;
                 matchingKeyword.foundAt = Date.now();
                 foundKeywords.push(matchingKeyword.word);
                 
-                // Update global state for all players
+                // Update UI immediately
+                renderGifts();
+                updateScoreboard();
+                
+                // Show success modal
+                showSuccessModal(`🎉 Excellent! You found "${matchingKeyword.word}"!<br><br><strong>${matchingKeyword.prize}</strong><br><br>🏆 You are now the winner of Gift ${matchingKeyword.id}!`);
+                
+                // Then update global state
                 const globalState = getGlobalGameState();
-                const wordIndex = gameData.findIndex(item => item.word === matchingKeyword.word);
                 globalState.foundWords[wordIndex] = {
                     winner: currentUser,
                     foundAt: Date.now(),
                     positions: wordPositions
                 };
                 saveGlobalGameState(globalState);
-                
-                showSuccessModal(`🎉 Excellent! You found "${matchingKeyword.word}"!<br><br><strong>${matchingKeyword.prize}</strong><br><br>🏆 You are now the winner of Gift ${matchingKeyword.id}!`);
-                
-                setTimeout(() => {
-                    renderGifts();
-                    updateScoreboard();
-                }, 600);
                 
                 if (foundKeywords.length === gameData.length) {
                     setTimeout(() => {
@@ -1768,79 +1782,22 @@
 
         // Listen for storage changes (when other players find words)
         window.addEventListener('storage', function(e) {
-            if (e.key === 'globalGameState' && currentUser && document.getElementById('gameContainer').style.display !== 'none') {
-                // Reload game state when other players make changes
-                const globalState = getGlobalGameState();
-                
-                // Update local game data with global changes
-                Object.entries(globalState.foundWords).forEach(([wordIndex, wordData]) => {
-                    if (gameData[wordIndex] && !gameData[wordIndex].found) {
-                        gameData[wordIndex].found = true;
-                        gameData[wordIndex].winner = wordData.winner;
-                        gameData[wordIndex].foundAt = wordData.foundAt;
-                        
-                        // Add to found keywords if not already there
-                        if (!foundKeywords.includes(gameData[wordIndex].word)) {
-                            foundKeywords.push(gameData[wordIndex].word);
-                        }
-                        
-                        // Mark word in grid
-                        if (wordData.positions) {
-                            wordData.positions.forEach(pos => {
-                                if (gridCells[pos.row] && gridCells[pos.row][pos.col]) {
-                                    gridCells[pos.row][pos.col].classList.add('found');
-                                }
-                            });
-                        }
-                        
-                        // Show notification if it wasn't found by current user
-                        if (wordData.winner !== currentUser) {
-                            setTimeout(() => {
-                                showSuccessModal(`🎉 "${gameData[wordIndex].word}" was found by <strong>${wordData.winner}</strong>!<br><br>The word has been marked in the grid.`);
-                            }, 1000);
-                        }
-                    }
-                });
-                
-                // Re-render gifts and update scoreboard
-                renderGifts();
-                updateScoreboard();
+            // Respond to both the state update and our trigger
+            if (e.key === 'globalGameState' || e.key === 'gameStateUpdateTrigger') {
+                synchronizeGameState();
             }
         });
 
         // Periodically sync with global state (backup for storage events)
+        let lastSyncTime = 0;
         setInterval(() => {
-            if (currentUser && document.getElementById('gameContainer').style.display !== 'none') {
-                const globalState = getGlobalGameState();
-                let hasChanges = false;
-                
-                Object.entries(globalState.foundWords).forEach(([wordIndex, wordData]) => {
-                    if (gameData[wordIndex] && !gameData[wordIndex].found) {
-                        gameData[wordIndex].found = true;
-                        gameData[wordIndex].winner = wordData.winner;
-                        gameData[wordIndex].foundAt = wordData.foundAt;
-                        hasChanges = true;
-                        
-                        if (!foundKeywords.includes(gameData[wordIndex].word)) {
-                            foundKeywords.push(gameData[wordIndex].word);
-                        }
-                        
-                        if (wordData.positions) {
-                            wordData.positions.forEach(pos => {
-                                if (gridCells[pos.row] && gridCells[pos.row][pos.col]) {
-                                    gridCells[pos.row][pos.col].classList.add('found');
-                                }
-                            });
-                        }
-                    }
-                });
-                
-                if (hasChanges) {
-                    renderGifts();
-                    updateScoreboard();
-                }
+            const now = Date.now();
+            // Only sync if it's been at least 2 seconds since last sync
+            if (now - lastSyncTime > 2000) {
+                synchronizeGameState();
+                lastSyncTime = now;
             }
-        }, 3000); // Check every 3 seconds
+        }, 1000); // Check every second but only sync if needed
     </script>
 </body>
 </html>
