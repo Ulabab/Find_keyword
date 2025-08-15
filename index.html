@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Find the Key Word</title>
+    <title>Find the Key Word - Enhanced</title>
     <style>
         * {
             margin: 0;
@@ -248,12 +248,47 @@
             background: rgba(255, 255, 255, 0.5);
         }
 
+        .connection-status {
+            position: absolute;
+            top: 20px;
+            left: 30px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 8px 12px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #27ae60;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.disconnected {
+            background: #e74c3c;
+            animation: none;
+        }
+
         .instructions {
             background: #2c3e50;
             color: white;
             padding: 15px 30px;
             text-align: center;
             font-size: 1.1em;
+        }
+
+        /* Update instructions for touch devices */
+        @media (max-width: 768px) {
+            .instructions {
+                font-size: 1em;
+                padding: 12px 20px;
+            }
         }
 
         .score-board {
@@ -265,6 +300,20 @@
             display: flex;
             justify-content: space-around;
             flex-wrap: wrap;
+        }
+
+        .recent-activity {
+            background: #2c3e50;
+            color: white;
+            padding: 10px 30px;
+            font-size: 0.9em;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        .activity-ticker {
+            display: inline-block;
+            animation: scroll-left 20s linear infinite;
         }
 
         .main-content {
@@ -294,6 +343,8 @@
             padding: 10px;
             border-radius: 10px;
             box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.1);
+            touch-action: none; /* Prevent default touch behaviors */
+            user-select: none;
         }
 
         .grid-cell {
@@ -310,10 +361,21 @@
             min-height: 0;
             width: 100%;
             height: 100%;
+            touch-action: none;
+            -webkit-tap-highlight-color: transparent; /* Remove iOS tap highlight */
+            -webkit-touch-callout: none; /* Disable iOS callout */
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
         }
 
         .grid-cell:hover {
             background: #ecf0f1;
+        }
+
+        .grid-cell:active {
+            background: rgba(102, 126, 234, 0.3);
         }
 
         .grid-cell.selecting {
@@ -334,6 +396,10 @@
             color: white;
             border-color: #c0392b;
             animation: shake 0.5s ease;
+        }
+
+        .grid-cell.recently-found {
+            animation: celebration-pulse 2s ease-in-out;
         }
 
         .gifts-sidebar {
@@ -378,6 +444,10 @@
         .gift-box.locked {
             opacity: 0.7;
             background: linear-gradient(145deg, #bdc3c7, #95a5a6);
+        }
+
+        .gift-box.recently-found {
+            animation: new-gift-celebration 3s ease-in-out;
         }
 
         .gift-icon {
@@ -435,6 +505,7 @@
             z-index: 1000;
             display: none;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transform: translateX(-50%); /* Center horizontally */
         }
 
         .modal {
@@ -474,9 +545,53 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         }
 
+        .notification-toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            z-index: 2000;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            max-width: 350px;
+        }
+
+        .notification-toast.show {
+            transform: translateX(0);
+        }
+
+        .notification-toast.other-player {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+        }
+
         @keyframes giftFound {
             0%, 100% { transform: scale(1); }
             50% { transform: scale(1.05); }
+        }
+
+        @keyframes new-gift-celebration {
+            0%, 100% { transform: scale(1); }
+            20%, 40%, 60%, 80% { transform: scale(1.1); }
+            30%, 50%, 70% { transform: scale(1.05); }
+        }
+
+        @keyframes celebration-pulse {
+            0%, 100% { 
+                background: linear-gradient(45deg, #2ecc71, #27ae60);
+                transform: scale(1);
+            }
+            25%, 75% { 
+                background: linear-gradient(45deg, #f39c12, #e67e22);
+                transform: scale(1.1);
+            }
+            50% { 
+                background: linear-gradient(45deg, #e74c3c, #c0392b);
+                transform: scale(1.05);
+            }
         }
 
         @keyframes found-flash {
@@ -500,66 +615,130 @@
             40% { transform: scale(1); }
         }
 
-        /* Responsive adjustments for the grid */
-        @media (max-width: 1200px) {
-            .main-content {
-                grid-template-columns: 1fr;
-                gap: 20px;
-            }
-            
-            .word-grid {
-                width: 500px;
-                height: 500px;
-                font-size: 0.7em;
-            }
-
-            .gifts-grid {
-                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
 
+        @keyframes scroll-left {
+            from { transform: translateX(100%); }
+            to { transform: translateX(-100%); }
+        }
+
+        /* Mobile-specific touch improvements */
         @media (max-width: 768px) {
             .word-grid {
-                width: 400px;
-                height: 400px;
+                width: 95vw;
+                max-width: 400px;
+                height: 95vw;
+                max-height: 400px;
             }
             
             .grid-cell {
                 font-size: 0.6em;
+                min-height: 15px;
             }
 
-            .score-board {
-                flex-direction: column;
-                gap: 10px;
+            .instructions {
+                font-size: 1em;
+                padding: 10px 15px;
             }
 
-            .header h1 {
-                font-size: 2em;
-            }
-
-            .user-info {
-                position: static;
-                margin-top: 15px;
+            .selection-info {
+                font-size: 1.1em;
+                padding: 10px 15px;
+                border-radius: 8px;
+                max-width: 80vw;
                 text-align: center;
             }
 
-            .keyword-manager {
-                grid-template-columns: 1fr;
+            .main-content {
+                padding: 15px;
+                gap: 15px;
             }
 
-            .prize-grid {
-                grid-template-columns: 1fr;
+            .puzzle-area {
+                padding: 15px;
+            }
+
+            .puzzle-area h2 {
+                font-size: 1.2em;
+                margin-bottom: 15px;
+            }
+
+            /* Improve touch target sizes */
+            .auth-btn, .back-btn {
+                padding: 15px 20px;
+                font-size: 1.1em;
+                min-height: 44px; /* iOS recommended touch target */
+            }
+
+            .logout-btn, .admin-btn {
+                padding: 8px 12px;
+                min-height: 36px;
+            }
+
+            /* Better mobile modal */
+            .modal-content {
+                margin: 20% auto;
+                width: 90%;
+                max-width: 400px;
+                padding: 20px;
+            }
+
+            /* Touch-friendly notifications */
+            .notification-toast {
+                font-size: 1em;
+                padding: 12px 16px;
             }
         }
 
         @media (max-width: 480px) {
             .word-grid {
-                width: 320px;
-                height: 320px;
+                width: 90vw;
+                max-width: 320px;
+                height: 90vw;
+                max-height: 320px;
+                gap: 0.5px;
             }
             
             .grid-cell {
                 font-size: 0.5em;
+                min-height: 12px;
+            }
+
+            .header h1 {
+                font-size: 1.5em;
+            }
+
+            .header p {
+                font-size: 1em;
+            }
+
+            .score-board {
+                font-size: 1em;
+                padding: 15px;
+            }
+
+            .selection-info {
+                font-size: 1em;
+                padding: 8px 12px;
+            }
+        }
+
+        /* Landscape mode optimizations for mobile */
+        @media (max-width: 768px) and (orientation: landscape) {
+            .main-content {
+                grid-template-columns: 1fr 250px;
+            }
+
+            .word-grid {
+                width: 300px;
+                height: 300px;
+            }
+
+            .gifts-sidebar {
+                max-height: 350px;
             }
         }
     </style>
@@ -646,6 +825,13 @@
                 <!-- User list will be displayed here -->
             </div>
         </div>
+
+        <div class="admin-section">
+            <h3>📊 Real-time Game Statistics</h3>
+            <div id="gameStats" style="background: white; padding: 15px; border-radius: 8px; border: 2px solid #ddd;">
+                <!-- Game statistics will be displayed here -->
+            </div>
+        </div>
     </div>
 
     <!-- Game Screen -->
@@ -653,6 +839,10 @@
         <div class="header">
             <h1>🎁 Find the Key Word</h1>
             <p>Search for hidden keywords in the letter grid to unlock treasure boxes!</p>
+            <div class="connection-status" id="connectionStatus">
+                <div class="status-indicator" id="statusIndicator"></div>
+                <span id="statusText">Connected</span>
+            </div>
             <div class="user-info">
                 <span>Welcome, <strong id="currentUser"></strong>!</span>
                 <button class="admin-btn" id="adminBtnInGame" onclick="showAdminPanel()" style="display: none;">Admin</button>
@@ -661,19 +851,32 @@
         </div>
 
         <div class="instructions">
-            💡 Click and drag over letters in the grid to select words. Top 3 prizes have no hints!
+            📱 Touch and drag across letters to select words • 🖱️ Click and drag on desktop • Top 3 prizes have no hints!
         </div>
 
         <div class="score-board">
             <span>🎯 Keywords Found: <span id="foundCount">0</span> / <span id="totalKeywords">10</span></span>
             <span>🎁 Gifts Unlocked: <span id="giftsCount">0</span> / <span id="totalGifts">10</span></span>
             <span>⏱️ Time: <span id="timer">00:00</span></span>
+            <span>👥 Players Online: <span id="playersOnline">1</span></span>
+        </div>
+
+        <div class="recent-activity">
+            <div class="activity-ticker" id="activityTicker">
+                🎮 Game started! Good luck finding all the treasures! 🎮
+            </div>
         </div>
 
         <div class="main-content">
             <div class="puzzle-area">
                 <h2 style="text-align: center; margin-bottom: 20px; color: #2c3e50;">🔍 Word Search Grid (20x20)</h2>
-                <div class="word-grid" id="wordGrid" onmousedown="startSelection(event)" onmousemove="updateSelection(event)" onmouseup="endSelection(event)">
+                <div class="word-grid" id="wordGrid" 
+                     onmousedown="startSelection(event)" 
+                     onmousemove="updateSelection(event)" 
+                     onmouseup="endSelection(event)"
+                     ontouchstart="handleTouchStart(event)"
+                     ontouchmove="handleTouchMove(event)"
+                     ontouchend="handleTouchEnd(event)">
                     <!-- Grid will be generated here -->
                 </div>
             </div>
@@ -693,12 +896,18 @@
         <div class="modal-content">
             <div class="celebration">🎉</div>
             <h2>Congratulations!</h2>
-            <p id="successMessage">You found a keyword!</p>
+            <p id="successModalMessage">You found a keyword!</p>
             <button onclick="closeModal()" style="margin-top: 20px; padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1em;">Continue</button>
         </div>
     </div>
 
     <script>
+        // Enhanced synchronization constants
+        const SYNC_INTERVAL = 500; // Check for updates every 500ms for faster response
+        const HEARTBEAT_INTERVAL = 2000; // Send heartbeat every 2 seconds
+        const CONNECTION_TIMEOUT = 10000; // Consider disconnected after 10 seconds
+        const MAX_ACTIVITY_MESSAGES = 50; // Limit activity log size
+
         // Default game data
         let defaultKeywords = [
             "TREASURE", "DIAMOND", "VICTORY", "ADVENTURE", "MYSTERY", 
@@ -718,7 +927,7 @@
             { prize: "🧭 Explorer's Compass", premium: false }
         ];
 
-        // Global game state functions
+        // Enhanced global game state functions
         function getGlobalGameState() {
             const state = localStorage.getItem('globalGameState');
             return state ? JSON.parse(state) : {
@@ -727,15 +936,19 @@
                 gameStarted: false,
                 gameStartTime: null,
                 gameEndTime: null,
-                lastUpdate: Date.now()
+                lastUpdate: Date.now(),
+                activePlayers: {}, // { username: { lastSeen: timestamp, status: "online" } }
+                activityLog: [], // Array of recent game activities
+                syncVersion: 1 // For better conflict resolution
             };
         }
 
         function saveGlobalGameState(state) {
             state.lastUpdate = Date.now();
+            state.syncVersion = (state.syncVersion || 0) + 1;
             localStorage.setItem('globalGameState', JSON.stringify(state));
-            // Trigger storage event for other tabs with a unique value to ensure it fires
-            localStorage.setItem('gameStateUpdateTrigger', Math.random().toString());
+            // Enhanced trigger with timestamp for better event handling
+            localStorage.setItem('gameStateUpdateTrigger', `${Date.now()}_${Math.random()}`);
         }
 
         function resetGlobalGameState() {
@@ -745,9 +958,54 @@
                 gameStarted: false,
                 gameStartTime: null,
                 gameEndTime: null,
-                lastUpdate: Date.now()
+                lastUpdate: Date.now(),
+                activePlayers: {},
+                activityLog: [],
+                syncVersion: 1
             };
             saveGlobalGameState(state);
+        }
+
+        function addActivityToLog(activity) {
+            const globalState = getGlobalGameState();
+            globalState.activityLog.unshift({
+                ...activity,
+                timestamp: Date.now(),
+                id: Math.random().toString(36).substr(2, 9)
+            });
+            
+            // Keep only recent activities
+            if (globalState.activityLog.length > MAX_ACTIVITY_MESSAGES) {
+                globalState.activityLog = globalState.activityLog.slice(0, MAX_ACTIVITY_MESSAGES);
+            }
+            
+            saveGlobalGameState(globalState);
+        }
+
+        function updatePlayerStatus(username, status = 'online') {
+            const globalState = getGlobalGameState();
+            globalState.activePlayers[username] = {
+                lastSeen: Date.now(),
+                status: status
+            };
+            
+            // Clean up old players (offline for more than CONNECTION_TIMEOUT)
+            const cutoffTime = Date.now() - CONNECTION_TIMEOUT;
+            Object.keys(globalState.activePlayers).forEach(player => {
+                if (globalState.activePlayers[player].lastSeen < cutoffTime) {
+                    delete globalState.activePlayers[player];
+                }
+            });
+            
+            saveGlobalGameState(globalState);
+        }
+
+        function getOnlinePlayersCount() {
+            const globalState = getGlobalGameState();
+            const cutoffTime = Date.now() - CONNECTION_TIMEOUT;
+            return Object.values(globalState.activePlayers).filter(
+                player => player.lastSeen > cutoffTime && player.status === 'online'
+            ).length;
         }
 
         function getCurrentUser() {
@@ -772,10 +1030,16 @@
         let gridCells = [];
         let startTime = null;
         let timerInterval = null;
+        let syncInterval = null;
+        let heartbeatInterval = null;
         let placedWords = [];
         let isLoginMode = true;
         let currentUser = null;
         let isAdmin = false;
+        let lastSyncVersion = 0;
+        let lastActivityCheck = 0;
+        let isTouching = false;
+        let touchStartTime = 0;
 
         // Admin credentials
         const ADMIN_USERNAME = "admin";
@@ -1013,6 +1277,57 @@
 
             // Load user list
             loadUserList();
+            
+            // Load game statistics
+            loadGameStatistics();
+        }
+
+        function loadGameStatistics() {
+            const globalState = getGlobalGameState();
+            const gameStats = document.getElementById('gameStats');
+            
+            const onlineCount = getOnlinePlayersCount();
+            const foundWordsCount = Object.keys(globalState.foundWords).length;
+            const totalWords = getKeywords().length;
+            const gameProgress = totalWords > 0 ? Math.round((foundWordsCount / totalWords) * 100) : 0;
+            
+            let recentActivity = '';
+            if (globalState.activityLog.length > 0) {
+                recentActivity = globalState.activityLog.slice(0, 5).map(activity => {
+                    const time = new Date(activity.timestamp).toLocaleTimeString();
+                    return `<div style="padding: 5px; border-bottom: 1px solid #eee;">
+                        <small style="color: #666;">${time}</small> - ${activity.message}
+                    </div>`;
+                }).join('');
+            } else {
+                recentActivity = '<div style="text-align: center; color: #666; padding: 20px;">No recent activity</div>';
+            }
+            
+            gameStats.innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                    <div style="background: #e8f5e8; padding: 15px; border-radius: 8px; text-align: center;">
+                        <h4 style="margin-bottom: 10px; color: #27ae60;">👥 Players Online</h4>
+                        <div style="font-size: 2em; font-weight: bold; color: #27ae60;">${onlineCount}</div>
+                    </div>
+                    <div style="background: #e8f4fd; padding: 15px; border-radius: 8px; text-align: center;">
+                        <h4 style="margin-bottom: 10px; color: #3498db;">🎯 Game Progress</h4>
+                        <div style="font-size: 2em; font-weight: bold; color: #3498db;">${gameProgress}%</div>
+                        <small>${foundWordsCount}/${totalWords} words found</small>
+                    </div>
+                    <div style="background: #fef9e7; padding: 15px; border-radius: 8px; text-align: center;">
+                        <h4 style="margin-bottom: 10px; color: #f39c12;">⏱️ Game Status</h4>
+                        <div style="font-size: 1.2em; font-weight: bold; color: #f39c12;">
+                            ${globalState.gameStarted ? 'ACTIVE' : 'WAITING'}
+                        </div>
+                    </div>
+                </div>
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                    <h4 style="margin-bottom: 10px;">📝 Recent Activity</h4>
+                    <div style="max-height: 200px; overflow-y: auto;">
+                        ${recentActivity}
+                    </div>
+                </div>
+            `;
         }
 
         function startGame() {
@@ -1028,9 +1343,16 @@
                     globalState.currentSession = Date.now();
                 }
                 
+                // Add activity log
+                addActivityToLog({
+                    type: 'game_start',
+                    message: '🚀 Game started by admin! Timer is now running for all players.',
+                    user: 'admin'
+                });
+                
                 saveGlobalGameState(globalState);
                 loadAdminData();
-                alert('Game started! All players will see the timer begin now.');
+                showNotification('Game started! All players will see the timer begin now.', 'success');
             }
         }
 
@@ -1039,9 +1361,16 @@
                 const globalState = getGlobalGameState();
                 globalState.gameStarted = false;
                 globalState.gameEndTime = Date.now();
+                
+                addActivityToLog({
+                    type: 'game_stop',
+                    message: '⏸️ Game stopped by admin. Timer paused for all players.',
+                    user: 'admin'
+                });
+                
                 saveGlobalGameState(globalState);
                 loadAdminData();
-                alert('Game stopped! All players will see the timer pause.');
+                showNotification('Game stopped! All players will see the timer pause.', 'info');
             }
         }
 
@@ -1049,17 +1378,29 @@
             if (confirm('Reset all found words? This will allow players to find them again but keep the game running.')) {
                 const globalState = getGlobalGameState();
                 globalState.foundWords = {};
+                
+                addActivityToLog({
+                    type: 'game_reset',
+                    message: '🔄 All found words reset by admin. Hunt begins again!',
+                    user: 'admin'
+                });
+                
                 saveGlobalGameState(globalState);
                 loadAdminData();
-                alert('Game state reset! All words can now be found again.');
+                showNotification('Game state reset! All words can now be found again.', 'success');
             }
         }
 
         function resetCompleteGame() {
             if (confirm('Completely reset the game? This will clear all progress and stop the current game for all players!')) {
                 resetGlobalGameState();
+                addActivityToLog({
+                    type: 'complete_reset',
+                    message: '🆕 Complete game reset by admin. Fresh start for everyone!',
+                    user: 'admin'
+                });
                 loadAdminData();
-                alert('Game completely reset! All players will see a fresh game.');
+                showNotification('Game completely reset! All players will see a fresh game.', 'warning');
             }
         }
 
@@ -1097,14 +1438,29 @@
             saveKeywords(keywords);
             document.getElementById('newKeyword').value = '';
             loadAdminData();
+            
+            addActivityToLog({
+                type: 'keyword_added',
+                message: `🔤 New keyword "${newKeyword}" added by admin.`,
+                user: 'admin'
+            });
+            
             alert('Keyword added successfully!');
         }
 
         function removeKeyword(index) {
             if (confirm('Are you sure you want to remove this keyword?')) {
                 const keywords = getKeywords();
+                const removedKeyword = keywords[index];
                 keywords.splice(index, 1);
                 saveKeywords(keywords);
+                
+                addActivityToLog({
+                    type: 'keyword_removed',
+                    message: `🗑️ Keyword "${removedKeyword}" removed by admin.`,
+                    user: 'admin'
+                });
+                
                 loadAdminData();
                 alert('Keyword removed successfully!');
             }
@@ -1130,6 +1486,13 @@
 
             if (updated) {
                 savePrizes(prizes);
+                
+                addActivityToLog({
+                    type: 'prizes_updated',
+                    message: '🎁 Prize information updated by admin.',
+                    user: 'admin'
+                });
+                
                 alert('Prizes updated successfully!');
                 loadAdminData();
             } else {
@@ -1164,6 +1527,13 @@
                 delete users[username];
                 saveUsers(users);
                 loadUserList();
+                
+                addActivityToLog({
+                    type: 'user_deleted',
+                    message: `👤 User "${username}" deleted by admin.`,
+                    user: 'admin'
+                });
+                
                 alert('User deleted successfully!');
             }
         }
@@ -1190,10 +1560,26 @@
                 saveUsers(users);
             }
             
+            // Start enhanced synchronization
+            startSynchronization();
+            
             initializeGame();
         }
 
         function logout() {
+            // Update player status to offline before logging out
+            if (currentUser) {
+                updatePlayerStatus(currentUser, 'offline');
+                
+                addActivityToLog({
+                    type: 'player_logout',
+                    message: `👋 ${currentUser} left the game.`,
+                    user: currentUser
+                });
+            }
+            
+            stopSynchronization();
+            
             currentUser = null;
             isAdmin = false;
             clearCurrentUser(); // Clear persistent login
@@ -1214,6 +1600,96 @@
             gameData = [];
         }
 
+        // Enhanced Synchronization Functions
+        function startSynchronization() {
+            // Update player status immediately
+            updatePlayerStatus(currentUser, 'online');
+            
+            addActivityToLog({
+                type: 'player_join',
+                message: `👋 ${currentUser} joined the game!`,
+                user: currentUser
+            });
+            
+            // Start sync interval for real-time updates
+            if (syncInterval) clearInterval(syncInterval);
+            syncInterval = setInterval(synchronizeGameState, SYNC_INTERVAL);
+            
+            // Start heartbeat to maintain online status
+            if (heartbeatInterval) clearInterval(heartbeatInterval);
+            heartbeatInterval = setInterval(() => {
+                if (currentUser && document.getElementById('gameContainer').style.display !== 'none') {
+                    updatePlayerStatus(currentUser, 'online');
+                    updateConnectionStatus(true);
+                }
+            }, HEARTBEAT_INTERVAL);
+            
+            // Initial sync
+            synchronizeGameState();
+        }
+
+        function stopSynchronization() {
+            if (syncInterval) {
+                clearInterval(syncInterval);
+                syncInterval = null;
+            }
+            
+            if (heartbeatInterval) {
+                clearInterval(heartbeatInterval);
+                heartbeatInterval = null;
+            }
+        }
+
+        function updateConnectionStatus(isConnected) {
+            const statusIndicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('statusText');
+            
+            if (isConnected) {
+                statusIndicator.className = 'status-indicator';
+                statusText.textContent = 'Connected';
+            } else {
+                statusIndicator.className = 'status-indicator disconnected';
+                statusText.textContent = 'Disconnected';
+            }
+        }
+
+        function showNotification(message, type = 'info', isOtherPlayer = false) {
+            // Remove existing notifications
+            const existingToast = document.querySelector('.notification-toast');
+            if (existingToast) {
+                existingToast.remove();
+            }
+            
+            const toast = document.createElement('div');
+            toast.className = `notification-toast ${isOtherPlayer ? 'other-player' : ''}`;
+            toast.innerHTML = message;
+            
+            document.body.appendChild(toast);
+            
+            // Show animation
+            setTimeout(() => toast.classList.add('show'), 100);
+            
+            // Hide after delay
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        function updateActivityTicker() {
+            const globalState = getGlobalGameState();
+            const ticker = document.getElementById('activityTicker');
+            
+            if (globalState.activityLog.length > 0) {
+                // Show most recent activities in ticker
+                const recentActivities = globalState.activityLog.slice(0, 3);
+                const messages = recentActivities.map(activity => activity.message).join(' • ');
+                ticker.textContent = messages + ' • ';
+            } else {
+                ticker.textContent = '🎮 Welcome to the treasure hunt! Find hidden words to unlock prizes! 🎮';
+            }
+        }
+
         // Game Functions
         function initializeGame() {
             const keywords = getKeywords();
@@ -1223,6 +1699,8 @@
             // Check if game has started
             if (!globalState.gameStarted) {
                 showWaitingMessage();
+                updateActivityTicker();
+                updateOnlinePlayersCount();
                 return;
             }
             
@@ -1254,11 +1732,19 @@
             });
 
             startTime = globalState.gameStartTime;
+            lastSyncVersion = globalState.syncVersion || 0;
             startTimer();
             generateGrid();
             renderGifts();
             updateScoreboard();
+            updateActivityTicker();
+            updateOnlinePlayersCount();
             synchronizeGameState(); // Load any words already found by others
+        }
+
+        function updateOnlinePlayersCount() {
+            const count = getOnlinePlayersCount();
+            document.getElementById('playersOnline').textContent = count;
         }
 
         function synchronizeGameState() {
@@ -1268,6 +1754,15 @@
 
             const globalState = getGlobalGameState();
             let hasChanges = false;
+
+            // Check for version changes for more efficient syncing
+            if (globalState.syncVersion && globalState.syncVersion === lastSyncVersion) {
+                // No changes since last sync, just update online count
+                updateOnlinePlayersCount();
+                return;
+            }
+
+            lastSyncVersion = globalState.syncVersion || 0;
 
             // Check if game start/stop status changed
             const gameStatusChanged = (
@@ -1282,6 +1777,7 @@
                     hideWaitingMessage();
                     startTimer();
                     hasChanges = true;
+                    showNotification('🚀 Game started! Timer is now running!', 'success');
                 } else {
                     // Game was stopped by admin
                     if (timerInterval) {
@@ -1290,6 +1786,7 @@
                     }
                     showWaitingMessage();
                     hasChanges = true;
+                    showNotification('⏸️ Game paused by admin.', 'info');
                 }
             }
 
@@ -1306,28 +1803,55 @@
                         foundKeywords.push(gameData[numericIndex].word);
                     }
 
-                    // Mark word in grid
+                    // Mark word in grid with animation
                     if (wordData.positions) {
                         wordData.positions.forEach(pos => {
                             if (gridCells[pos.row] && gridCells[pos.row][pos.col]) {
-                                gridCells[pos.row][pos.col].classList.add('found');
+                                const cell = gridCells[pos.row][pos.col];
+                                cell.classList.add('found');
+                                
+                                // Add celebration animation if found by another player
+                                if (wordData.winner !== currentUser) {
+                                    cell.classList.add('recently-found');
+                                    setTimeout(() => {
+                                        cell.classList.remove('recently-found');
+                                    }, 2000);
+                                }
                             }
                         });
                     }
 
-                    // Show notification if it wasn't found by current user
-                    if (wordData.winner !== currentUser) {
-                        setTimeout(() => {
-                            showSuccessModal(`🎉 "${gameData[numericIndex].word}" was found by <strong>${wordData.winner}</strong>!<br><br>The word has been marked in the grid.`);
-                        }, 100);
+                    // Show notification based on who found it
+                    if (wordData.winner === currentUser) {
+                        // Current user found it - this should have been handled already
+                        // but just in case, show a brief confirmation
+                    } else {
+                        // Another player found it
+                        showNotification(
+                            `🎉 "${gameData[numericIndex].word}" was found by <strong>${wordData.winner}</strong>!`,
+                            'info',
+                            true
+                        );
                     }
                 }
             });
+
+            // Update activity ticker with new activities
+            if (globalState.activityLog.length > 0 && globalState.activityLog[0].timestamp > lastActivityCheck) {
+                updateActivityTicker();
+                lastActivityCheck = globalState.activityLog[0].timestamp;
+            }
 
             if (hasChanges) {
                 renderGifts();
                 updateScoreboard();
             }
+
+            // Always update online players count
+            updateOnlinePlayersCount();
+            
+            // Update connection status
+            updateConnectionStatus(true);
         }
 
         function showWaitingMessage() {
@@ -1521,7 +2045,14 @@
 
             gameData.forEach((gift) => {
                 const giftBox = document.createElement('div');
-                giftBox.className = `gift-box ${gift.found ? 'found' : 'locked'} ${gift.premium ? 'premium' : ''}`;
+                let boxClasses = `gift-box ${gift.found ? 'found' : 'locked'} ${gift.premium ? 'premium' : ''}`;
+                
+                // Add animation class if recently found
+                if (gift.found && gift.foundAt && (Date.now() - gift.foundAt < 5000)) {
+                    boxClasses += ' recently-found';
+                }
+                
+                giftBox.className = boxClasses;
                 
                 let hintDisplay = '';
                 let winnerDisplay = '';
@@ -1535,9 +2066,10 @@
                 } else {
                     // Show winner information
                     const foundDate = gift.foundAt ? new Date(gift.foundAt).toLocaleDateString() : 'Unknown';
+                    const foundTime = gift.foundAt ? new Date(gift.foundAt).toLocaleTimeString() : 'Unknown';
                     winnerDisplay = `<div style="background: #f39c12; color: white; padding: 5px; border-radius: 5px; font-size: 0.8em; margin-bottom: 5px;">
                         🏆 Winner: <strong>${gift.winner}</strong><br>
-                        <small>Found: ${foundDate}</small>
+                        <small>Found: ${foundDate} at ${foundTime}</small>
                     </div>`;
                 }
 
@@ -1563,6 +2095,7 @@
         function startSelection(event) {
             if (event.target.classList.contains('grid-cell')) {
                 isSelecting = true;
+                isTouching = false; // This is a mouse event
                 selectionStart = {
                     row: parseInt(event.target.dataset.row),
                     col: parseInt(event.target.dataset.col)
@@ -1576,7 +2109,7 @@
         }
 
         function updateSelection(event) {
-            if (isSelecting && event.target.classList.contains('grid-cell')) {
+            if (isSelecting && !isTouching && event.target.classList.contains('grid-cell')) {
                 selectionEnd = {
                     row: parseInt(event.target.dataset.row),
                     col: parseInt(event.target.dataset.col)
@@ -1593,7 +2126,7 @@
         }
 
         function endSelection(event) {
-            if (isSelecting) {
+            if (isSelecting && !isTouching) {
                 isSelecting = false;
                 document.getElementById('selectionInfo').style.display = 'none';
                 
@@ -1602,6 +2135,106 @@
                 } else {
                     clearSelection();
                 }
+            }
+        }
+
+        // Touch event handlers for mobile devices
+        function handleTouchStart(event) {
+            event.preventDefault(); // Prevent scrolling and other default behaviors
+            
+            const touch = event.touches[0];
+            const element = document.elementFromPoint(touch.clientX, touch.clientY);
+            
+            if (element && element.classList.contains('grid-cell')) {
+                isSelecting = true;
+                isTouching = true;
+                touchStartTime = Date.now();
+                
+                selectionStart = {
+                    row: parseInt(element.dataset.row),
+                    col: parseInt(element.dataset.col)
+                };
+                selectionEnd = selectionStart;
+                currentSelection = '';
+                clearSelection();
+                updateSelectionDisplay();
+                
+                // Show selection info for touch
+                showTouchSelectionInfo(touch.clientX, touch.clientY);
+                
+                // Add vibration feedback if available
+                if (navigator.vibrate) {
+                    navigator.vibrate(20);
+                }
+            }
+        }
+
+        function handleTouchMove(event) {
+            if (!isSelecting || !isTouching) return;
+            
+            event.preventDefault(); // Prevent scrolling
+            
+            const touch = event.touches[0];
+            const element = document.elementFromPoint(touch.clientX, touch.clientY);
+            
+            if (element && element.classList.contains('grid-cell')) {
+                const newRow = parseInt(element.dataset.row);
+                const newCol = parseInt(element.dataset.col);
+                
+                // Only update if we're on a different cell
+                if (selectionEnd.row !== newRow || selectionEnd.col !== newCol) {
+                    selectionEnd = { row: newRow, col: newCol };
+                    updateSelectionDisplay();
+                    
+                    // Update selection info position for touch
+                    updateTouchSelectionInfo(touch.clientX, touch.clientY);
+                    
+                    // Light vibration feedback for selection change
+                    if (navigator.vibrate && currentSelection.length > 1) {
+                        navigator.vibrate(10);
+                    }
+                }
+            }
+        }
+
+        function handleTouchEnd(event) {
+            if (!isSelecting || !isTouching) return;
+            
+            event.preventDefault();
+            
+            const touchDuration = Date.now() - touchStartTime;
+            
+            isSelecting = false;
+            isTouching = false;
+            document.getElementById('selectionInfo').style.display = 'none';
+            
+            // Only process selection if it was held long enough and has content
+            if (touchDuration > 100 && currentSelection.length > 1) {
+                // Stronger vibration for word check
+                if (navigator.vibrate) {
+                    navigator.vibrate(50);
+                }
+                checkSelection(currentSelection);
+            } else {
+                clearSelection();
+            }
+        }
+
+        function showTouchSelectionInfo(x, y) {
+            const info = document.getElementById('selectionInfo');
+            // Position above the touch point and center horizontally
+            info.style.left = x + 'px';
+            info.style.top = (y - 60) + 'px';
+            info.style.display = 'block';
+            info.textContent = currentSelection || '';
+        }
+
+        function updateTouchSelectionInfo(x, y) {
+            const info = document.getElementById('selectionInfo');
+            if (info.style.display === 'block') {
+                info.style.left = x + 'px';
+                info.style.top = (y - 60) + 'px';
+                info.textContent = currentSelection;
             }
         }
 
@@ -1680,6 +2313,15 @@
                 // Show success modal
                 showSuccessModal(`🎉 Excellent! You found "${matchingKeyword.word}"!<br><br><strong>${matchingKeyword.prize}</strong><br><br>🏆 You are now the winner of Gift ${matchingKeyword.id}!`);
                 
+                // Add to activity log
+                addActivityToLog({
+                    type: 'word_found',
+                    message: `🎯 ${currentUser} found "${matchingKeyword.word}" and won: ${matchingKeyword.prize}`,
+                    user: currentUser,
+                    word: matchingKeyword.word,
+                    prize: matchingKeyword.prize
+                });
+                
                 // Then update global state
                 const globalState = getGlobalGameState();
                 globalState.foundWords[wordIndex] = {
@@ -1689,9 +2331,17 @@
                 };
                 saveGlobalGameState(globalState);
                 
+                // Show notification to other players
+                showNotification(`🎉 You found "${matchingKeyword.word}"! Great job!`, 'success');
+                
                 if (foundKeywords.length === gameData.length) {
                     setTimeout(() => {
                         clearInterval(timerInterval);
+                        addActivityToLog({
+                            type: 'game_complete',
+                            message: `🏆 ${currentUser} found all treasures and completed the game!`,
+                            user: currentUser
+                        });
                         showSuccessModal('🏆 INCREDIBLE! You found all the treasures!<br>You are the ultimate Treasure Hunter!');
                     }, 2000);
                 }
@@ -1721,8 +2371,15 @@
             if (wordData) {
                 wordData.found = true;
                 wordData.positions.forEach(pos => {
-                    gridCells[pos.row][pos.col].classList.add('found');
-                    gridCells[pos.row][pos.col].classList.remove('selecting');
+                    const cell = gridCells[pos.row][pos.col];
+                    cell.classList.add('found');
+                    cell.classList.remove('selecting');
+                    
+                    // Add celebration animation for current player
+                    cell.classList.add('recently-found');
+                    setTimeout(() => {
+                        cell.classList.remove('recently-found');
+                    }, 2000);
                 });
             }
         }
@@ -1751,7 +2408,7 @@
         }
 
         function showSuccessModal(message) {
-            document.getElementById('successMessage').innerHTML = message;
+            document.getElementById('successModalMessage').innerHTML = message;
             document.getElementById('successModal').style.display = 'block';
         }
 
@@ -1759,12 +2416,34 @@
             document.getElementById('successModal').style.display = 'none';
         }
 
-        // Prevent text selection
+        // Prevent text selection and improve touch handling
         document.addEventListener('selectstart', function(e) {
             if (e.target.closest('.word-grid')) {
                 e.preventDefault();
             }
         });
+
+        // Prevent context menu on long press for mobile
+        document.addEventListener('contextmenu', function(e) {
+            if (e.target.closest('.word-grid')) {
+                e.preventDefault();
+            }
+        });
+
+        // Prevent default touch behaviors that might interfere
+        document.addEventListener('touchstart', function(e) {
+            if (e.target.closest('.word-grid')) {
+                // Allow our custom touch handling
+                return;
+            }
+        }, { passive: false });
+
+        document.addEventListener('touchmove', function(e) {
+            if (e.target.closest('.word-grid')) {
+                // Prevent scrolling when interacting with grid
+                e.preventDefault();
+            }
+        }, { passive: false });
 
         // Handle Enter key for login/register
         document.addEventListener('keypress', function(e) {
@@ -1773,31 +2452,45 @@
             }
         });
 
+        // Enhanced storage event handling
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'globalGameState' || e.key === 'gameStateUpdateTrigger') {
+                // Throttle sync calls to avoid excessive updates
+                clearTimeout(window.syncTimeout);
+                window.syncTimeout = setTimeout(synchronizeGameState, 100);
+            }
+        });
+
+        // Visibility change handling for better sync
+        document.addEventListener('visibilitychange', function() {
+            if (currentUser && !document.hidden) {
+                // Tab became visible - force sync
+                synchronizeGameState();
+                updatePlayerStatus(currentUser, 'online');
+            }
+        });
+
         // Initialize the game
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('authContainer').style.display = 'block';
             document.getElementById('gameContainer').style.display = 'none';
             document.getElementById('adminContainer').style.display = 'none';
-        });
-
-        // Listen for storage changes (when other players find words)
-        window.addEventListener('storage', function(e) {
-            // Respond to both the state update and our trigger
-            if (e.key === 'globalGameState' || e.key === 'gameStateUpdateTrigger') {
-                synchronizeGameState();
+            
+            // Check for persistent login
+            const savedUser = getCurrentUser();
+            if (savedUser) {
+                // Auto-login if user was previously logged in
+                document.getElementById('username').value = savedUser;
+                // Don't auto-login for security, just pre-fill username
             }
         });
 
-        // Periodically sync with global state (backup for storage events)
-        let lastSyncTime = 0;
-        setInterval(() => {
-            const now = Date.now();
-            // Only sync if it's been at least 2 seconds since last sync
-            if (now - lastSyncTime > 2000) {
-                synchronizeGameState();
-                lastSyncTime = now;
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            if (currentUser) {
+                updatePlayerStatus(currentUser, 'offline');
             }
-        }, 1000); // Check every second but only sync if needed
+        });
     </script>
 </body>
 </html>
